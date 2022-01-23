@@ -45,8 +45,7 @@ class TtcHeader
       name = nil
       file.stack_pos do
         table_directory = TableDirectory.from_file(file, offset)
-        name_table = \
-          NameTable.from_file(file, table_directory.records['name'])
+        name_table = NameTable.from_file(file, table_directory.records['name'])
 
         name_ids.each do |name_id|
           name = name_table.find(name_id)

@@ -27,18 +27,13 @@ class SfntFontCollection < SfntFont
     path = self.find_path(filename)
     path.open do |file|
       ttc_header = TtcHeader.from_file(file)
-      table_directory \
-        = TableDirectory.from_file(file,
-                                   ttc_header.records[index].offset)
-      head, name, post, os2, cmap, hhea, hmtx \
-        = self.load_tables(file, table_directory)
-      self.new(path, index, table_directory.type,
-               head, name, post, os2, cmap, hhea, hmtx)
+      table_directory = TableDirectory.from_file(file, ttc_header.records[index].offset)
+      head, name, post, os2, cmap, hhea, hmtx = self.load_tables(file, table_directory)
+      self.new(path, index, table_directory.type, head, name, post, os2, cmap, hhea, hmtx)
     end
   end
 
-  def initialize(path, index, type,
-                 head, name, post, os2, cmap, hhea, hmtx)
+  def initialize(path, index, type, head, name, post, os2, cmap, hhea, hmtx)
     super(path, type, head, name, post, os2, cmap, hhea, hmtx)
     @index = index
   end
@@ -48,9 +43,7 @@ class SfntFontCollection < SfntFont
   def to_stream
     stream = File.open(@path, 'rb') do |file|
       ttc_header = TtcHeader.from_file(file)
-      table_directory \
-        = TableDirectory.from_file(file,
-                                   ttc_header.records[@index].offset)
+      table_directory = TableDirectory.from_file(file, ttc_header.records[@index].offset)
 
       file.seek(ttc_header.records[@index].offset)
 

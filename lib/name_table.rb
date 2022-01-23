@@ -109,8 +109,7 @@ class NameTable
 
     if @records_for_id.has_key?(name_id)
       found = @records_for_id[name_id].find do |record|
-        (record.platform_id == platform_id) \
-        && (record.language_id == language_id)
+        (record.platform_id == platform_id) && (record.language_id == language_id)
       end
       name = found.str if found
     end

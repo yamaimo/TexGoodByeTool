@@ -77,11 +77,9 @@ class CmapTable
         (offset == 0) ? 0 : (offset_base + offset)
       end
 
-      zipped = start_cids.zip(end_cids, gid_deltas,
-                              gid_array_offsets)
+      zipped = start_cids.zip(end_cids, gid_deltas, gid_array_offsets)
       zipped.pop  # ターミネータは取り除いておく
-      records = zipped.map do |start_cid, end_cid, gid_delta,
-                               gid_array_offset|
+      records = zipped.map do |start_cid, end_cid, gid_delta, gid_array_offset|
         if gid_array_offset == 0
           DeltaRecord.new(start_cid, end_cid, gid_delta)
         else
@@ -165,8 +163,7 @@ class CmapTable
     end
 
     def find_gid(cid)
-      # Array#bsearchでrecord.start_cidが初めてcid以下になる
-      # recordを探す
+      # Array#bsearchでrecord.start_cidが初めてcid以下になるrecordを探す
       found_record = @reversed_records.bsearch do |record|
         record.start_cid <= cid
       end
@@ -197,13 +194,9 @@ class CmapTable
 
           case [platform_id, encoding_id, format_id]
           when [0, 3, 4], [3, 1, 4] # Unicode BMP
-            subtables[subtable_offset] = \
-              Format4Subtable.from_file(file, cmap_offset,
-                                        subtable_offset)
+            subtables[subtable_offset] = Format4Subtable.from_file(file, cmap_offset, subtable_offset)
           when [0, 4, 12], [3, 10, 12]  # Unicode Full
-            subtables[subtable_offset] = \
-              Format12Subtable.from_file(file, cmap_offset,
-                                         subtable_offset)
+            subtables[subtable_offset] = Format12Subtable.from_file(file, cmap_offset, subtable_offset)
           end
         end
       end

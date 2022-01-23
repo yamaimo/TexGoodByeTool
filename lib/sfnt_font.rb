@@ -69,10 +69,8 @@ class SfntFont
     path = self.find_path(filename)
     path.open do |file|
       table_directory = TableDirectory.from_file(file)
-      head, name, post, os2, cmap, hhea, hmtx \
-        = self.load_tables(file, table_directory)
-      self.new(path, table_directory.type,
-               head, name, post, os2, cmap, hhea, hmtx)
+      head, name, post, os2, cmap, hhea, hmtx = self.load_tables(file, table_directory)
+      self.new(path, table_directory.type, head, name, post, os2, cmap, hhea, hmtx)
     end
   end
 
@@ -80,13 +78,10 @@ class SfntFont
     head = HeadTable.from_file(file, table_directory.records['head'])
     name = NameTable.from_file(file, table_directory.records['name'])
     post = PostTable.from_file(file, table_directory.records['post'])
-    os2 = Os2Table.from_file(file, table_directory.records['OS/2'],
-                             head.units)
+    os2 = Os2Table.from_file(file, table_directory.records['OS/2'], head.units)
     cmap = CmapTable.from_file(file, table_directory.records['cmap'])
-    hhea = HheaTable.from_file(file, table_directory.records['hhea'],
-                               head.units)
-    hmtx = HmtxTable.from_file(file, table_directory.records['hmtx'],
-                               hhea.hmetrics_count, head.units)
+    hhea = HheaTable.from_file(file, table_directory.records['hhea'], head.units)
+    hmtx = HmtxTable.from_file(file, table_directory.records['hmtx'], hhea.hmetrics_count, head.units)
     [head, name, post, os2, cmap, hhea, hmtx]
   end
 

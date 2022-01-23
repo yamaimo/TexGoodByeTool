@@ -35,8 +35,7 @@ class Os2Table
     self.new(weight, family_class, ascender, descender, line_gap)
   end
 
-  def initialize(weight, family_class,
-                 ascender, descender, line_gap)
+  def initialize(weight, family_class, ascender, descender, line_gap)
     @weight = weight
     @family_class = family_class
     @ascender = ascender
@@ -44,8 +43,7 @@ class Os2Table
     @line_gap = line_gap
   end
 
-  attr_reader :weight, :family_class
-  attr_reader :ascender, :descender, :line_gap
+  attr_reader :weight, :family_class, :ascender, :descender, :line_gap
 
   def bold?
     @weight > 400 # Normal(Regular)は400
