@@ -27,7 +27,6 @@ $ git submodule add git@github.com:yamaimo/TexGoodByeTool.git tool
 `Rakefile.sample`をコピーして編集。
 
 ```
-$ cd ..
 $ cp tool/Rakefile.samaple Rakefile
 $ vi Rakefile
 ```
