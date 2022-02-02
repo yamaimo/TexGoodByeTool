@@ -6,6 +6,7 @@ require_relative 'pdf_font'
 require_relative 'length_extension'
 require_relative 'pdf_document'
 require_relative 'pdf_page'
+require_relative 'pdf_graphic'
 require_relative 'pdf_writer'
 
 if ARGV.empty?
@@ -52,6 +53,19 @@ page.add_content do |content|
       end
       text.puts
       text.puts "TeXグッバイしたい！"
+    end
+  end
+
+  content.stack_origin do
+    content.move_origin 22.mm, 108.mm
+    graphic = PdfGraphic.new
+    graphic.draw_on(content) do |pen|
+      path = PdfGraphic::Path.new do
+        from [0.cm, 0.cm]
+        to [1.cm, 1.cm]
+        to [2.cm, 0.cm], ctrl1: [1.552.cm, 1.cm], ctrl2: [2.cm, 0.448.cm]
+      end
+      pen.stroke path
     end
   end
 

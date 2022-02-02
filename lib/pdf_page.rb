@@ -11,6 +11,8 @@ class PdfPage
       @operations = []
     end
 
+    attr_reader :resource, :operations
+
     def stack_origin(&block)
       @operations.push "q"
       block.call
