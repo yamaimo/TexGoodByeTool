@@ -4,6 +4,8 @@ class PdfGraphic
 
   class Path
 
+    include Math
+
     private
 
     def initialize(&block)
@@ -52,20 +54,26 @@ class PdfGraphic
 
     public
 
-    def move(dx, dy)
-      # not yet
+    def move(dx: 0, dy: 0)
+      @operands = @operands.map{|x, y| [x + dx, y + dy]}
     end
 
-    def rotate(rad, anchor: [0, 0])
-      # not yet
+    def rotate(rad: 0, anchor: [0, 0])
+      self.move dx: -anchor[0], dy: -anchor[1]
+      @operands = @operands.map{|x, y| [cos(rad) * x - sin(rad) * y, sin(rad) * x + cos(rad) * y]}
+      self.move dx: anchor[0], dy: anchor[1]
     end
 
-    def h_flip(x)
-      # not yet
+    def h_flip(x: 0)
+      self.move dx: -x
+      @operands = @operands.map{|x, y| [-x, y]}
+      self.move dx: x
     end
 
-    def v_flip(y)
-      # not yet
+    def v_flip(y: 0)
+      self.move dy: -y
+      @operands = @operands.map{|x, y| [x, -y]}
+      self.move dy: y
     end
 
     def to_pen_operand
@@ -142,6 +150,20 @@ if __FILE__ == $0
       to [2, 0], ctrl1: [1.552, 1], ctrl2: [2, 0.448]
     end
     pen.stroke path
+
+    copied = path.clone
+    copied.move dx: 1, dy: 2
+    pen.stroke copied
+
+    copied = path.clone
+    copied.rotate rad: Math::PI/4, anchor: [1, 1]
+    pen.stroke copied
+
+    copied = path.clone
+    copied.h_flip x: 4
+    pen.stroke copied
+    copied.v_flip y: 4
+    pen.stroke copied
   end
 
   pool = PdfObjectPool.new

@@ -66,6 +66,24 @@ page.add_content do |content|
         to [2.cm, 0.cm], ctrl1: [1.552.cm, 1.cm], ctrl2: [2.cm, 0.448.cm]
       end
       pen.stroke path
+
+      copied = path.clone
+      5.times do
+        copied.move dx: 0.5.cm, dy: -1.5.cm
+        pen.stroke copied
+      end
+
+      copied = path.clone
+      5.times do
+        copied.rotate rad: - Math::PI / 6, anchor: [3.cm, 0.cm]
+        pen.stroke copied
+      end
+
+      copied = path.clone
+      copied.h_flip x: 6.cm
+      pen.stroke copied
+      copied.v_flip y: 3.cm
+      pen.stroke copied
     end
   end
 
