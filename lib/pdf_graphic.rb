@@ -118,7 +118,7 @@ class PdfGraphic
 
       super() do
         if round > 0
-          ctrl = round * (4.0 / 3.0) * (Math.sqrt(2) - 1)
+          ctrl = round * (4.0 / 3.0) * (sqrt(2) - 1)
 
           from [left_x + round, upper_y]
           to [right_x - round, upper_y]
@@ -163,8 +163,8 @@ class PdfGraphic
       lower_y = [y1, y2].min
       middle_y = (y1 + y2) / 2.0
 
-      h_ctrl = (right_x - middle_x) * (4.0 / 3.0) * (Math.sqrt(2) - 1)
-      v_ctrl = (upper_y - middle_y) * (4.0 / 3.0) * (Math.sqrt(2) - 1)
+      h_ctrl = (right_x - middle_x) * (4.0 / 3.0) * (sqrt(2) - 1)
+      v_ctrl = (upper_y - middle_y) * (4.0 / 3.0) * (sqrt(2) - 1)
 
       super() do
         from [middle_x, upper_y]
