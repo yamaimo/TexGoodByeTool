@@ -1,5 +1,7 @@
 # PDFグラフィックス
 
+require_relative 'pdf_color'
+
 class PdfGraphic
 
   class Path
@@ -56,6 +58,12 @@ class PdfGraphic
 
     def move(dx: 0, dy: 0)
       @operands = @operands.map{|x, y| [x + dx, y + dy]}
+    end
+
+    def scale(ratio: 1.0, anchor: [0, 0])
+      self.move dx: -anchor[0], dy: -anchor[1]
+      @operands = @operands.map{|x, y| [x * ratio, y * ratio]}
+      self.move dx: anchor[0], dy: anchor[1]
     end
 
     def rotate(rad: 0, anchor: [0, 0])
@@ -125,13 +133,59 @@ class PdfGraphic
 
   end
 
-  def initialize
-    # not yet
+  module LineCapStyle
+    BUTT = 0
+    ROUND = 1
+    SQUARE = 2
   end
 
+  module LineJoinStyle
+    MITER = 0
+    ROUND = 1
+    BEVEL = 2
+  end
+
+  DEFAULT_LINE_WIDTH = 1.0
+  DEFAULT_LINE_CAP = LineCapStyle::BUTT
+  DEFAULT_LINE_JOIN = LineJoinStyle::MITER
+  DEFAULT_MITER_LIMIT = 10.0
+  DEFAULT_DASH_PATTERN = [].freeze
+  DEFAULT_DASH_PHASE = 0
+  DEFAULT_STROKE_COLOR = PdfColor::Gray.new.freeze
+  DEFAULT_FILL_COLOR = PdfColor::Gray.new.freeze
+  DEFAULT_USE_EVEN_ODD_RULE = false
+
+  def initialize
+    @line_width = DEFAULT_LINE_WIDTH
+    @line_cap = DEFAULT_LINE_CAP
+    @line_join = DEFAULT_LINE_JOIN
+    @miter_limit = DEFAULT_MITER_LIMIT
+    @dash_pattern = DEFAULT_DASH_PATTERN
+    @dash_phase = DEFAULT_DASH_PHASE
+    @stroke_color = DEFAULT_STROKE_COLOR
+    @fill_color = DEFAULT_FILL_COLOR
+    @use_even_odd_rule = DEFAULT_USE_EVEN_ODD_RULE
+  end
+
+  attr_accessor :line_width, :line_cap, :line_join, :miter_limit, :dash_pattern, :dash_phase
+  attr_accessor :stroke_color, :fill_color, :use_even_odd_rule
+
   def draw_on(content, &block)
-    pen = Pen.new(content.operations)
+    operations = content.operations
+    operations.push "q"
+
+    operations.push "#{@line_width} w" if @line_width != DEFAULT_LINE_WIDTH
+    operations.push "#{@line_cap} J" if @line_cap != DEFAULT_LINE_CAP
+    operations.push "#{@line_join} j" if @line_join != DEFAULT_LINE_JOIN
+    operations.push "#{@miter_limit} M" if @miter_limit != DEFAULT_MITER_LIMIT
+    operations.push "[#{@dash_pattern.join(' ')}] #{@dash_phase} d" if @dash_pattern != DEFAULT_DASH_PATTERN
+    operations.push @stroke_color.stroke_color_operation if @stroke_color != DEFAULT_STROKE_COLOR
+    operations.push @fill_color.fill_color_operation if @fill_color != DEFAULT_FILL_COLOR
+
+    pen = Pen.new(operations, use_even_odd_rule: @use_even_odd_rule)
     block.call(pen)
+
+    operations.push "Q"
   end
 
 end
@@ -141,29 +195,58 @@ if __FILE__ == $0
   require_relative 'pdf_object_pool'
 
   page_content = PdfPage::Content.new(nil)
+
+  path = PdfGraphic::Path.new do
+    from [0, 0]
+    to [1, 1]
+    to [2, 0], ctrl1: [1.552, 1], ctrl2: [2, 0.448]
+  end
+
   graphic = PdfGraphic.new
+  graphic.draw_on(page_content) do |pen|
+    pen.stroke path
+  end
 
   graphic.draw_on(page_content) do |pen|
-    path = PdfGraphic::Path.new do
-      from [0, 0]
-      to [1, 1]
-      to [2, 0], ctrl1: [1.552, 1], ctrl2: [2, 0.448]
-    end
-    pen.stroke path
+    copied = path.clone
+    copied.scale ratio: 1.5
+    pen.stroke copied
+  end
 
+  graphic.line_width = 5
+  graphic.line_cap = PdfGraphic::LineCapStyle::ROUND
+  graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
+  graphic.draw_on(page_content) do |pen|
     copied = path.clone
     copied.move dx: 1, dy: 2
     pen.stroke copied
+  end
 
+  graphic.line_cap = PdfGraphic::DEFAULT_LINE_CAP
+  graphic.line_join = PdfGraphic::DEFAULT_LINE_JOIN
+  graphic.dash_pattern = [4, 2]
+  graphic.dash_phase = 2
+  graphic.draw_on(page_content) do |pen|
     copied = path.clone
     copied.rotate rad: Math::PI/4, anchor: [1, 1]
     pen.stroke copied
+  end
 
+  graphic.dash_pattern = PdfGraphic::DEFAULT_DASH_PATTERN
+  graphic.dash_phase = PdfGraphic::DEFAULT_DASH_PHASE
+  graphic.stroke_color = PdfColor::Rgb.new red: 1.0
+  graphic.fill_color = PdfColor::Rgb.new green: 1.0
+  graphic.draw_on(page_content) do |pen|
     copied = path.clone
     copied.h_flip x: 4
-    pen.stroke copied
+    pen.stroke_fill copied
+  end
+
+  graphic.use_even_odd_rule = true
+  graphic.draw_on(page_content) do |pen|
+    copied = path.clone
     copied.v_flip y: 4
-    pen.stroke copied
+    pen.stroke_fill copied
   end
 
   pool = PdfObjectPool.new
