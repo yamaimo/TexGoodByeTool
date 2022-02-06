@@ -119,7 +119,7 @@ page.add_content do |content|
   end
 
   content.stack_origin do
-    content.move_origin 108.mm, 80.mm
+    content.move_origin 108.mm, 40.mm
 
     scale_ratio = 50
     center = [0.5, 0.5]
@@ -138,16 +138,13 @@ page.add_content do |content|
     end
     snowman_body.scale ratio: scale_ratio, anchor: center
 
-    snowman_eyes = PdfGraphic::Path.new do
-      # FIXME: 楕円を使いたい
-      from [0.40, 0.53]
-      to [0.40, 0.59]
-      close
-      from [0.60, 0.53]
-      to [0.60, 0.59]
-      close
+    snowman_eyes = [
+      PdfGraphic::Oval.new([0.38, 0.59], [0.42, 0.53]),
+      PdfGraphic::Oval.new([0.58, 0.59], [0.62, 0.53]),
+    ]
+    snowman_eyes.each do |eye|
+      eye.scale ratio: scale_ratio, anchor: center
     end
-    snowman_eyes.scale ratio: scale_ratio, anchor: center
 
     snowman_mouth = PdfGraphic::Path.new do
       from [0.40, 0.48]
@@ -182,8 +179,14 @@ page.add_content do |content|
     graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
     graphic.draw_on(content) do |pen|
       pen.stroke snowman_body
-      pen.stroke snowman_eyes
       pen.stroke snowman_mouth
+    end
+
+    graphic.fill_color = PdfColor::Rgb.new
+    graphic.draw_on(content) do |pen|
+      snowman_eyes.each do |eye|
+        pen.stroke_fill eye
+      end
     end
 
     graphic.fill_color = PdfColor::Rgb.new red: 1.0
@@ -191,6 +194,21 @@ page.add_content do |content|
       pen.stroke_fill snowman_hat
       pen.stroke_fill snowman_muffler
     end
+  end
+
+  graphic = PdfGraphic.new
+  graphic.draw_on(content) do |pen|
+    basic_rect = PdfGraphic::Rectangle.new([7.cm, 8.cm], [10.cm, 10.cm])
+    pen.stroke basic_rect
+
+    round_rect = PdfGraphic::Rectangle.new([11.cm, 8.cm], [14.cm, 10.cm], round: 3.mm)
+    pen.stroke round_rect
+
+    circle = PdfGraphic::Oval.new([7.cm, 5.cm], [9.cm, 7.cm])
+    pen.stroke circle
+
+    oval = PdfGraphic::Oval.new([11.cm, 5.cm], [14.cm, 7.cm])
+    pen.stroke oval
   end
 
   content.add_text do |text|

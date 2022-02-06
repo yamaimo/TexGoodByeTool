@@ -99,13 +99,90 @@ class PdfGraphic
   end
 
   class Rectangle < Path
-    # 矩形、角丸もオプションで
-    # not yet
+
+    def initialize(point1, point2, round: 0)
+      x1, y1 = point1
+      x2, y2 = point2
+
+      left_x = [x1, x2].min
+      right_x = [x1, x2].max
+      upper_y = [y1, y2].max
+      lower_y = [y1, y2].min
+
+      if round > 0
+        width = right_x - left_x
+        height = upper_y - lower_y
+        round_max = [width, height].min / 2.0
+        round = round.clamp(0.0, round_max)
+      end
+
+      super() do
+        if round > 0
+          ctrl = round * (4.0 / 3.0) * (Math.sqrt(2) - 1)
+
+          from [left_x + round, upper_y]
+          to [right_x - round, upper_y]
+          to [right_x, upper_y - round], \
+            ctrl1: [right_x - round + ctrl, upper_y], \
+            ctrl2: [right_x, upper_y - round + ctrl]
+          to [right_x, lower_y + round]
+          to [right_x - round, lower_y], \
+            ctrl1: [right_x, lower_y + round - ctrl], \
+            ctrl2: [right_x - round + ctrl, lower_y]
+          to [left_x + round, lower_y]
+          to [left_x, lower_y + round], \
+            ctrl1: [left_x + round - ctrl, lower_y], \
+            ctrl2: [left_x, lower_y + round - ctrl]
+          to [left_x, upper_y - round]
+          to [left_x + round, upper_y], \
+            ctrl1: [left_x, upper_y - round + ctrl], \
+            ctrl2: [left_x + round - ctrl, upper_y]
+        else
+          from [left_x, upper_y]
+          to [right_x, upper_y]
+          to [right_x, lower_y]
+          to [left_x, lower_y]
+          close
+        end
+      end
+
+    end
+
   end
 
   class Oval < Path
-    # 楕円
-    # not yet
+
+    def initialize(point1, point2)
+      x1, y1 = point1
+      x2, y2 = point2
+
+      left_x = [x1, x2].min
+      right_x = [x1, x2].max
+      middle_x = (x1 + x2) / 2.0
+      upper_y = [y1, y2].max
+      lower_y = [y1, y2].min
+      middle_y = (y1 + y2) / 2.0
+
+      h_ctrl = (right_x - middle_x) * (4.0 / 3.0) * (Math.sqrt(2) - 1)
+      v_ctrl = (upper_y - middle_y) * (4.0 / 3.0) * (Math.sqrt(2) - 1)
+
+      super() do
+        from [middle_x, upper_y]
+        to [right_x, middle_y], \
+          ctrl1: [middle_x + h_ctrl, upper_y], \
+          ctrl2: [right_x, middle_y + v_ctrl]
+        to [middle_x, lower_y], \
+          ctrl1: [right_x, middle_y - v_ctrl], \
+          ctrl2: [middle_x + h_ctrl, lower_y]
+        to [left_x, middle_y], \
+          ctrl1: [middle_x - h_ctrl, lower_y], \
+          ctrl2: [left_x, middle_y - v_ctrl]
+        to [middle_x, upper_y], \
+          ctrl1: [left_x, middle_y + v_ctrl], \
+          ctrl2: [middle_x - h_ctrl, upper_y]
+      end
+    end
+
   end
 
   class Pen
@@ -247,6 +324,21 @@ if __FILE__ == $0
     copied = path.clone
     copied.v_flip y: 4
     pen.stroke_fill copied
+  end
+
+  graphic = PdfGraphic.new
+  graphic.draw_on(page_content) do |pen|
+    basic_rect = PdfGraphic::Rectangle.new([0, 0], [2, 3])
+    pen.stroke basic_rect
+
+    round_rect = PdfGraphic::Rectangle.new([3, 0], [7, 3], round: 1)
+    pen.stroke round_rect
+
+    circle = PdfGraphic::Oval.new([0, 0], [1, 1])
+    pen.stroke circle
+
+    oval = PdfGraphic::Oval.new([1, 1], [3, 2])
+    pen.stroke oval
   end
 
   pool = PdfObjectPool.new
