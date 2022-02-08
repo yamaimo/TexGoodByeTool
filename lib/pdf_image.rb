@@ -1,6 +1,7 @@
 # PDF画像
 
 require 'chunky_png'
+require 'stringio'
 require 'zlib'
 
 class PdfImage
@@ -40,10 +41,29 @@ class PdfImage
 
     def attach_content_to(pool)
       image = ChunkyPNG::Image.from_file(@path)
-      rgb_stream = image.to_rgb_stream
 
-      compressed = Zlib::Deflate.deflate(rgb_stream)
-      length = compressed.bytesize
+      mask_stream = get_mask_stream(image)
+      mask_compressed = Zlib::Deflate.deflate(mask_stream)
+
+      rgb_stream = image.to_rgb_stream
+      rgb_compressed = Zlib::Deflate.deflate(rgb_stream)
+
+      image_mask = Object.new
+      pool.attach_content(image_mask, <<~END_OF_MASK)
+        <<
+          /Type /XObject
+          /Subtype /Image
+          /Width #{@width}
+          /Height #{@height}
+          /ImageMask true
+          /BitsPerComponent 1
+          /Filter /FlateDecode
+          /Length #{mask_compressed.bytesize}
+        >>
+        stream
+        #{mask_compressed}
+        endstream
+      END_OF_MASK
 
       pool.attach_content(self, <<~END_OF_PNG)
         <<
@@ -53,13 +73,38 @@ class PdfImage
           /Height #{@height}
           /ColorSpace /DeviceRGB
           /BitsPerComponent 8
+          /Mask #{pool.get_ref(image_mask)}
           /Filter /FlateDecode
-          /Length #{length}
+          /Length #{rgb_compressed.bytesize}
         >>
         stream
-        #{compressed}
+        #{rgb_compressed}
         endstream
       END_OF_PNG
+    end
+
+    private
+
+    def get_mask_stream(image)
+      masks = []
+      alpha_stream = StringIO.new(image.to_alpha_channel_stream)
+
+      # 行ごとに処理する
+      image.height.times do
+        line = alpha_stream.read(image.width)
+        # 8バイトをパックして1バイトにする（上位ビットから詰める）
+        # 足りない場合は下位にパディング
+        line.each_byte.each_slice(8) do |data|
+          mask = 0
+          data.each_with_index do |byte, idx|
+            bit = (byte > 0) ? 0 : 1
+            mask |= bit << (7 - idx)
+          end
+          masks.push mask
+        end
+      end
+
+      masks.pack("C*")
     end
 
   end

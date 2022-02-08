@@ -215,6 +215,16 @@ page.add_content do |content|
     pen.stroke oval
   end
 
+  content.stack_origin do
+    content.move_origin 70.mm, 190.mm
+    content.add_text do |text|
+      text.set_font pdf_font.id, 14
+      text.set_leading 16
+      text.puts "雪だるまの後ろに文字を出力！"
+      text.puts "マスクはちゃんと指定できてる？"
+    end
+  end
+
   image = PdfImage.new
   image.dpi = 350
   image.draw_on(content) do |pen|
