@@ -7,6 +7,7 @@ require_relative 'length_extension'
 require_relative 'pdf_document'
 require_relative 'pdf_page'
 require_relative 'pdf_graphic'
+require_relative 'pdf_image'
 require_relative 'pdf_writer'
 
 if ARGV.empty?
@@ -32,6 +33,8 @@ sfnt_font = if ARGV.size == 1
             end
 pdf_font = PdfFont.new(sfnt_font)
 
+snowman_png = PdfImage::Png.load('christmas_snowman.png')
+
 using LengthExtension
 
 # A5
@@ -40,6 +43,7 @@ page_height = 210.mm
 document = PdfDocument.new(page_width, page_height)
 
 document.add_font(pdf_font)
+document.add_image(snowman_png)
 
 page = PdfPage.add_to(document)
 page.add_content do |content|
@@ -209,6 +213,22 @@ page.add_content do |content|
 
     oval = PdfGraphic::Oval.new([11.cm, 5.cm], [14.cm, 7.cm])
     pen.stroke oval
+  end
+
+  content.stack_origin do
+    content.move_origin 70.mm, 190.mm
+    content.add_text do |text|
+      text.set_font pdf_font.id, 14
+      text.set_leading 16
+      text.puts "雪だるまの後ろに文字を出力！"
+      text.puts "マスクはちゃんと指定できてる？"
+    end
+  end
+
+  image = PdfImage.new
+  image.dpi = 350
+  image.draw_on(content) do |pen|
+    pen.paint snowman_png.id, x: 80.mm, y: 210.mm
   end
 
   content.add_text do |text|

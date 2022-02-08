@@ -60,6 +60,7 @@ class PdfDocument
 
     def initialize
       @fonts = {}
+      @images = {}
     end
 
     def add_font(pdf_font)
@@ -70,13 +71,25 @@ class PdfDocument
       @fonts[id]
     end
 
+    def add_image(pdf_image)
+      @images[pdf_image.id] = pdf_image
+    end
+
+    def get_image(id)
+      @images[id]
+    end
+
     def attach_content_to(pool)
       @fonts.each {|id, font| font.attach_content_to(pool)}
-
       font_entries = @fonts.map{|id, font| "/#{id} #{pool.get_ref(font)}"}.join(' ')
+
+      @images.each {|id, image| image.attach_content_to(pool)}
+      image_entries = @images.map{|id, image| "/#{id} #{pool.get_ref(image)}"}.join(' ')
+
       pool.attach_content(self, <<~END_OF_RESOURCE)
         <<
           /Font << #{font_entries} >>
+          /XObject << #{image_entries} >>
         >>
       END_OF_RESOURCE
     end
@@ -97,6 +110,10 @@ class PdfDocument
 
   def add_font(pdf_font)
     @root.page_tree.resource.add_font(pdf_font)
+  end
+
+  def add_image(pdf_image)
+    @root.page_tree.resource.add_image(pdf_image)
   end
 
 end
@@ -145,6 +162,28 @@ if __FILE__ == $0
 
   end
 
+  class PdfImageMock
+
+    def initialize(name)
+      @name = name
+    end
+
+    def id
+      "Image#{self.object_id}"
+    end
+
+    def attach_content_to(pool)
+      pool.attach_content(self, <<~END_OF_IMAGE)
+        <<
+          /Type /XObject
+          /Subtype /Image
+          /Name /#{@name}
+        >>
+      END_OF_IMAGE
+    end
+
+  end
+
   # A5
   using LengthExtension
   page_width = 148.mm
@@ -156,6 +195,8 @@ if __FILE__ == $0
   document.add_font(PdfFontMock.new('test1'))
   document.add_font(PdfFontMock.new('test2'))
   document.add_font(PdfFontMock.new('test3'))
+  document.add_image(PdfImageMock.new('image1'))
+  document.add_image(PdfImageMock.new('image2'))
 
   pool = PdfObjectPool.new
   document.root.attach_content_to(pool)
