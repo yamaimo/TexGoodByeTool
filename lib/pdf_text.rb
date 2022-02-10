@@ -27,6 +27,10 @@ class PdfText
     @operations.push "  #{size} TL"
   end
 
+  def set_text_rise(size)
+    @operations.push "  #{size} Ts"
+  end
+
   def puts(str="")
     if str.nil? || str.empty?
       @operations.push "  T*"

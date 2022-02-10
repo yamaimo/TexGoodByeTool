@@ -135,6 +135,17 @@ if __FILE__ == $0
 
   end
 
+  def put_tex(text, fontsize)
+    # base/plain.tex:\def\TeX{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
+    text.putc char: 'T'
+    text.put_space -0.1667
+    text.set_text_rise(-fontsize * 0.5 * 0.5)
+    text.putc char: 'E'
+    text.set_text_rise 0
+    text.put_space -0.125
+    text.putc char: 'X'
+  end
+
   using LengthExtension
 
   document = PdfDocumentMock.new
@@ -150,7 +161,8 @@ if __FILE__ == $0
         text.puts str
       end
       text.puts
-      text.puts "TeXグッバイしたい！"
+      put_tex(text, 14)
+      text.puts "グッバイしたい！"
     end
   end
 
