@@ -248,21 +248,20 @@ class PdfGraphic
   attr_accessor :stroke_color, :fill_color, :use_even_odd_rule
 
   def draw_on(content, &block)
-    operations = content.operations
-    operations.push "q"
+    content.stack_graphic_state do
+      operations = content.operations
 
-    operations.push "#{@line_width} w" if @line_width != DEFAULT_LINE_WIDTH
-    operations.push "#{@line_cap} J" if @line_cap != DEFAULT_LINE_CAP
-    operations.push "#{@line_join} j" if @line_join != DEFAULT_LINE_JOIN
-    operations.push "#{@miter_limit} M" if @miter_limit != DEFAULT_MITER_LIMIT
-    operations.push "[#{@dash_pattern.join(' ')}] #{@dash_phase} d" if @dash_pattern != DEFAULT_DASH_PATTERN
-    operations.push @stroke_color.stroke_color_operation if @stroke_color != DEFAULT_STROKE_COLOR
-    operations.push @fill_color.fill_color_operation if @fill_color != DEFAULT_FILL_COLOR
+      operations.push "#{@line_width} w" if @line_width != DEFAULT_LINE_WIDTH
+      operations.push "#{@line_cap} J" if @line_cap != DEFAULT_LINE_CAP
+      operations.push "#{@line_join} j" if @line_join != DEFAULT_LINE_JOIN
+      operations.push "#{@miter_limit} M" if @miter_limit != DEFAULT_MITER_LIMIT
+      operations.push "[#{@dash_pattern.join(' ')}] #{@dash_phase} d" if @dash_pattern != DEFAULT_DASH_PATTERN
+      operations.push @stroke_color.stroke_color_operation if @stroke_color != DEFAULT_STROKE_COLOR
+      operations.push @fill_color.fill_color_operation if @fill_color != DEFAULT_FILL_COLOR
 
-    pen = Pen.new(operations, use_even_odd_rule: @use_even_odd_rule)
-    block.call(pen)
-
-    operations.push "Q"
+      pen = Pen.new(operations, use_even_odd_rule: @use_even_odd_rule)
+      block.call(pen)
+    end
   end
 
 end

@@ -122,43 +122,40 @@ class PdfImage
 
   class Pen
 
-    def initialize(resource, operations, anchor: DEFAULT_ANCHOR, dpi: nil)
-      @resource = resource
-      @operations = operations
+    def initialize(content, anchor: DEFAULT_ANCHOR, dpi: nil)
+      @content = content
       @anchor = anchor
       @dpi = dpi
     end
 
     def paint(id, x: 0, y: 0)
-      @operations.push "q"
+      @content.stack_graphic_state do
+        # 画像を出力すると、1pt x 1ptの矩形に出力される
+        # 1pt = 1/72inなので、72dpi(=72px/in)のとき1px = 1/72in = 1pt
+        # なので72dpiならwidth x heightに伸ばすといい
+        # 解像度が違う場合はさらに72/dpi倍すると長さがあう
+        image = @content.resource.get_image(id)
+        dpi = @dpi || image.dpi # 指定がなければ画像のdpiを使う
+        scale = 72.0 / dpi
+        x_scale = image.width * scale
+        y_scale = image.height * scale
 
-      # 画像を出力すると、1pt x 1ptの矩形に出力される
-      # 1pt = 1/72inなので、72dpi(=72px/in)のとき1px = 1/72in = 1pt
-      # なので72dpiならwidth x heightに伸ばすといい
-      # 解像度が違う場合はさらに72/dpi倍すると長さがあう
-      image = @resource.get_image(id)
-      dpi = @dpi || image.dpi # 指定がなければ画像のdpiを使う
-      scale = 72.0 / dpi
-      x_scale = image.width * scale
-      y_scale = image.height * scale
+        # 何もしないと画像の左下が起点になる
+        # 指定されたanchorになるようにオフセットを乗せる
+        x_offset, y_offset = \
+          case @anchor
+          when Anchor::UPPER_LEFT then [0, -y_scale]
+          when Anchor::LOWER_LEFT then [0, 0]
+          when Anchor::UPPER_RIGHT then [-x_scale, -yscale]
+          when Anchor::LOWER_RIGHT then [-x_scale, 0]
+          when Anchor::CENTER then [-x_scale/2.0, -y_scale/2.0]
+          end
+        x += x_offset
+        y += y_offset
 
-      # 何もしないと画像の左下が起点になる
-      # 指定されたanchorになるようにオフセットを乗せる
-      x_offset, y_offset = \
-        case @anchor
-        when Anchor::UPPER_LEFT then [0, -y_scale]
-        when Anchor::LOWER_LEFT then [0, 0]
-        when Anchor::UPPER_RIGHT then [-x_scale, -yscale]
-        when Anchor::LOWER_RIGHT then [-x_scale, 0]
-        when Anchor::CENTER then [-x_scale/2.0, -y_scale/2.0]
-        end
-      x += x_offset
-      y += y_offset
-
-      @operations.push "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
-      @operations.push "/#{id} Do"
-
-      @operations.push "Q"
+        @content.operations.push "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
+        @content.operations.push "/#{id} Do"
+      end
     end
 
   end
@@ -171,9 +168,7 @@ class PdfImage
   attr_accessor :anchor, :dpi
 
   def draw_on(content, &block)
-    resource = content.resource
-    operations = content.operations
-    pen = Pen.new(resource, operations, anchor: @anchor, dpi: @dpi)
+    pen = Pen.new(content, anchor: @anchor, dpi: @dpi)
     block.call(pen)
   end
 
