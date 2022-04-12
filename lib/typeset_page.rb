@@ -85,7 +85,7 @@ class TypesetPage
         current_y -= vertical_margin
       end
 
-      content.stack_origin do
+      content.stack_graphic_state do
         content.move_origin x, current_y
         box.write_to content
       end
@@ -134,10 +134,10 @@ if __FILE__ == $0
 
     end
 
-    def stack_origin(&block)
-      puts "[stack_origin] begin"
+    def stack_graphic_state(&block)
+      puts "[stack_graphic_state] begin"
       block.call
-      puts "[stack_origin] end"
+      puts "[stack_graphic_state] end"
     end
 
     def move_origin(x, y)
