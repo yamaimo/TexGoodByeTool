@@ -58,7 +58,7 @@ end
 
 page = PdfPage.add_to(document)
 page.add_content do |content|
-  content.stack_origin do
+  content.stack_graphic_state do
     content.move_origin 22.mm, 188.mm
     content.add_text do |text|
       text.set_font pdf_font.id, 14
@@ -72,7 +72,7 @@ page.add_content do |content|
     end
   end
 
-  content.stack_origin do
+  content.stack_graphic_state do
     content.move_origin 20.mm, 110.mm
 
     path = PdfGraphic::Path.new do
@@ -134,7 +134,7 @@ page.add_content do |content|
     end
   end
 
-  content.stack_origin do
+  content.stack_graphic_state do
     content.move_origin 108.mm, 40.mm
 
     scale_ratio = 50
@@ -227,7 +227,7 @@ page.add_content do |content|
     pen.stroke oval
   end
 
-  content.stack_origin do
+  content.stack_graphic_state do
     content.move_origin 70.mm, 190.mm
     content.add_text do |text|
       text.set_font pdf_font.id, 14
