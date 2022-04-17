@@ -185,31 +185,6 @@ class PdfGraphic
 
   end
 
-  class Pen
-
-    def initialize(operations, use_even_odd_rule: false)
-      @operations = operations
-      @use_even_odd_rule = use_even_odd_rule
-    end
-
-    def stroke(path)
-      @operations.push "#{path.to_pen_operand}S"
-    end
-
-    def fill(path)
-      operation = "#{path.to_pen_operand}f"
-      operation += "*" if @use_even_odd_rule
-      @operations.push operation
-    end
-
-    def stroke_fill(path)
-      operation = "#{path.to_pen_operand}B"
-      operation += "*" if @use_even_odd_rule
-      @operations.push operation
-    end
-
-  end
-
   module LineCapStyle
     BUTT = 0
     ROUND = 1
@@ -232,6 +207,61 @@ class PdfGraphic
   DEFAULT_FILL_COLOR = PdfColor::Gray.new.freeze
   DEFAULT_USE_EVEN_ODD_RULE = false
 
+  class Pen
+
+    def initialize(operations, use_even_odd_rule: DEFAULT_USE_EVEN_ODD_RULE)
+      @operations = operations
+      @use_even_odd_rule = use_even_odd_rule
+    end
+
+    attr_accessor :use_even_odd_rule
+
+    def set_line_width(line_width)
+      @operations.push "#{line_width} w"
+    end
+
+    def set_line_cap(line_cap)
+      @operations.push "#{line_cap} J"
+    end
+
+    def set_line_join(line_join)
+      @operations.push "#{line_join} j"
+    end
+
+    def set_miter_limit(miter_limit)
+      @operations.push "#{miter_limit} M"
+    end
+
+    def set_dash(dash_pattern, dash_phase)
+      @operations.push "[#{dash_pattern.join(' ')}] #{dash_phase} d"
+    end
+
+    def set_stroke_color(color)
+      @operations.push color.stroke_color_operation
+    end
+
+    def set_fill_color(color)
+      @operations.push color.fill_color_operation
+    end
+
+    def stroke(path)
+      @operations.push "#{path.to_pen_operand}S"
+    end
+
+    def fill(path)
+      operation = "#{path.to_pen_operand}f"
+      operation += "*" if @use_even_odd_rule
+      @operations.push operation
+    end
+
+    def stroke_fill(path)
+      operation = "#{path.to_pen_operand}B"
+      operation += "*" if @use_even_odd_rule
+      @operations.push operation
+    end
+
+  end
+
   def initialize
     @line_width = DEFAULT_LINE_WIDTH
     @line_cap = DEFAULT_LINE_CAP
@@ -249,17 +279,16 @@ class PdfGraphic
 
   def draw_on(content, &block)
     content.stack_graphic_state do
-      operations = content.operations
+      pen = Pen.new(content.operations, use_even_odd_rule: @use_even_odd_rule)
 
-      operations.push "#{@line_width} w" if @line_width != DEFAULT_LINE_WIDTH
-      operations.push "#{@line_cap} J" if @line_cap != DEFAULT_LINE_CAP
-      operations.push "#{@line_join} j" if @line_join != DEFAULT_LINE_JOIN
-      operations.push "#{@miter_limit} M" if @miter_limit != DEFAULT_MITER_LIMIT
-      operations.push "[#{@dash_pattern.join(' ')}] #{@dash_phase} d" if @dash_pattern != DEFAULT_DASH_PATTERN
-      operations.push @stroke_color.stroke_color_operation if @stroke_color != DEFAULT_STROKE_COLOR
-      operations.push @fill_color.fill_color_operation if @fill_color != DEFAULT_FILL_COLOR
+      pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
+      pen.set_line_cap(@line_cap) if @line_cap != DEFAULT_LINE_CAP
+      pen.set_line_join(@line_join) if @line_join != DEFAULT_LINE_JOIN
+      pen.set_miter_limit(@miter_limit) if @miter_limit != DEFAULT_MITER_LIMIT
+      pen.set_dash(@dash_pattern, @dash_phase) if @dash_pattern != DEFAULT_DASH_PATTERN
+      pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
+      pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
 
-      pen = Pen.new(operations, use_even_odd_rule: @use_even_odd_rule)
       block.call(pen)
     end
   end
