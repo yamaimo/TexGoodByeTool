@@ -14,11 +14,12 @@ class DomHandler
 
   end
 
-  def initialize
+  def initialize(default_font)
     @node_handlers = {}
     @text_handler = nil
     @page_handler = nil
     @unknown_node_handler = UnknownNodeHandler.new
+    @typeset_font_stack = [default_font]
   end
 
   def register_node_handler(tag, node_handler)
@@ -56,6 +57,16 @@ class DomHandler
 
   def create_new_page(typeset_document)
     @page_handler.create_new_page(typeset_document)
+  end
+
+  def stack_font(typeset_font, &block)
+    @typeset_font_stack.push typeset_font
+    block.call
+    @typeset_font_stack.pop
+  end
+
+  def current_font
+    @typeset_font_stack[-1]
   end
 
   # フォントを設定してブロック処理をする
@@ -120,7 +131,7 @@ if __FILE__ == $0
 
   end
 
-  dom_handler = DomHandler.new
+  dom_handler = DomHandler.new(nil) # ここではfontは使わない
   PrintNodeHandler.add_to(dom_handler, "h1")
   PrintNodeHandler.add_to(dom_handler, "p")
   PrintNodeHandler.add_to(dom_handler, "text")
