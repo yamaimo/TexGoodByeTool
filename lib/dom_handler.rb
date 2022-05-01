@@ -17,6 +17,7 @@ class DomHandler
   def initialize
     @node_handlers = {}
     @text_handler = nil
+    @page_handler = nil
     @unknown_node_handler = UnknownNodeHandler.new
   end
 
@@ -28,6 +29,10 @@ class DomHandler
   def register_text_handler(text_handler)
     @text_handler = text_handler
     text_handler.dom_handler = self
+  end
+
+  def register_page_handler(page_handler)
+    @page_handler = page_handler
   end
 
   def handle_dom(dom, typeset_document)
@@ -49,6 +54,10 @@ class DomHandler
     end
   end
 
+  def create_new_page(typeset_document)
+    @page_handler.create_new_page(typeset_document)
+  end
+
   # フォントを設定してブロック処理をする
   # 改行の扱いを設定してブロック処理する
   # とかもあるとよさそう
@@ -60,9 +69,9 @@ class DomHandler
 end
 
 if __FILE__ == $0
-  class PrintHandler
+  class PrintNodeHandler
 
-    def self.add_to_dom_handler(dom_handler, value)
+    def self.add_to(dom_handler, value)
       if value == "text"
         text_handler = self.new
         dom_handler.register_text_handler(text_handler)
@@ -80,6 +89,9 @@ if __FILE__ == $0
 
     def handle_node(node, typeset_document)
       if node.is_a?(Ox::Node)
+        if node.value == "h1"
+          @dom_handler.create_new_page(typeset_document)
+        end
         puts "[node] #{node.value}"
         node.each do |child|
           @dom_handler.dispatch_node_handling(child, typeset_document)
@@ -91,16 +103,35 @@ if __FILE__ == $0
 
   end
 
+  class PrintPageHandler
+
+    def self.add_to(dom_handler, style)
+      page_handler = self.new(style)
+      dom_handler.register_page_handler(page_handler)
+    end
+
+    def initialize(style)
+      @style = style
+    end
+
+    def create_new_page(typeset_document)
+      puts "[page] #{@style}"
+    end
+
+  end
+
   dom_handler = DomHandler.new
-  PrintHandler.add_to_dom_handler(dom_handler, "h1")
-  PrintHandler.add_to_dom_handler(dom_handler, "p")
-  PrintHandler.add_to_dom_handler(dom_handler, "text")
+  PrintNodeHandler.add_to(dom_handler, "h1")
+  PrintNodeHandler.add_to(dom_handler, "p")
+  PrintNodeHandler.add_to(dom_handler, "text")
+  PrintPageHandler.add_to(dom_handler, "plain")
 
   dom = Ox.load(<<~END_OF_HTML)
     <body>
       <h1>hoge</h1>
       xxx
       <p>hugahuga</p>
+      <h1>huga</h1>
       <p>huga<strong>hoge</strong>huga</p>
     </body>
   END_OF_HTML
