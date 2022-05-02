@@ -17,9 +17,9 @@ class DomHandler
   end
 
   def initialize(default_sfnt_font, default_font_size)
+    @page_handler = nil
     @node_handlers = {}
     @text_handler = nil
-    @page_handler = nil
     @unknown_node_handler = UnknownNodeHandler.new
 
     # FIXME: text handlerがボックスの設定を参照できるようにした方がよさそう
@@ -31,6 +31,10 @@ class DomHandler
 
   attr_accessor :ignore_line_feed
 
+  def register_page_handler(page_handler)
+    @page_handler = page_handler
+  end
+
   def register_node_handler(tag, node_handler)
     @node_handlers[tag] = node_handler
   end
@@ -39,8 +43,8 @@ class DomHandler
     @text_handler = text_handler
   end
 
-  def register_page_handler(page_handler)
-    @page_handler = page_handler
+  def create_new_page(typeset_document)
+    @page_handler.create_new_page(typeset_document)
   end
 
   def handle_dom(dom, typeset_document)
@@ -62,10 +66,6 @@ class DomHandler
     end
   end
 
-  def create_new_page(typeset_document)
-    @page_handler.create_new_page(typeset_document)
-  end
-
   def stack_font(typeset_font, &block)
     @typeset_font_stack.push typeset_font
     block.call
@@ -79,6 +79,23 @@ class DomHandler
 end
 
 if __FILE__ == $0
+  class PrintPageHandler
+
+    def self.add_to(dom_handler, style)
+      page_handler = self.new(style)
+      dom_handler.register_page_handler(page_handler)
+    end
+
+    def initialize(style)
+      @style = style
+    end
+
+    def create_new_page(typeset_document)
+      puts "[page] #{@style}"
+    end
+
+  end
+
   class PrintNodeHandler
 
     def self.add_to(dom_handler, value)
@@ -115,28 +132,11 @@ if __FILE__ == $0
 
   end
 
-  class PrintPageHandler
-
-    def self.add_to(dom_handler, style)
-      page_handler = self.new(style)
-      dom_handler.register_page_handler(page_handler)
-    end
-
-    def initialize(style)
-      @style = style
-    end
-
-    def create_new_page(typeset_document)
-      puts "[page] #{@style}"
-    end
-
-  end
-
   dom_handler = DomHandler.new(nil, nil) # ここではfontは使わない
+  PrintPageHandler.add_to(dom_handler, "plain")
   PrintNodeHandler.add_to(dom_handler, "h1")
   PrintNodeHandler.add_to(dom_handler, "p")
   PrintNodeHandler.add_to(dom_handler, "text")
-  PrintPageHandler.add_to(dom_handler, "plain")
 
   dom = Ox.load(<<~END_OF_HTML)
     <body>

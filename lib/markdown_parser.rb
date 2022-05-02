@@ -9,13 +9,13 @@ require_relative 'typeset_padding'
 require_relative 'typeset_font'
 
 require_relative 'dom_handler'
+require_relative 'page_style'
+require_relative 'page_handler'
 require_relative 'block_node_style'
 require_relative 'block_node_handler'
 require_relative 'inline_node_style'
 require_relative 'inline_node_handler'
 require_relative 'text_handler'
-require_relative 'page_style'
-require_relative 'page_handler'
 
 class MarkdownParser
 
@@ -124,6 +124,10 @@ class MarkdownParser
   def setup_dom_handler
     dom_handler = DomHandler.new(@default_sfnt_font, @default_font_size)
 
+    # ページ
+    style = get_page_style
+    PageHandler.add_to(dom_handler, style)
+
     # header
     (1..6).each do |level|
       tag = "h#{level}"
@@ -164,16 +168,17 @@ class MarkdownParser
     # テキスト
     TextHandler.add_to(dom_handler)
 
-    # ページ
-    page_style = PageStyle.new
-    page_style.margin = @page_margin
-    page_style.padding = @page_padding
-    page_style.to_footer_gap = @to_footer_gap
-    page_style.footer_sfnt_font = @default_sfnt_font
-    page_style.footer_font_size = @default_font_size
-    PageHandler.add_to(dom_handler, page_style)
-
     dom_handler
+  end
+
+  def get_page_style
+    style = PageStyle.new
+    style.margin = @page_margin
+    style.padding = @page_padding
+    style.to_footer_gap = @to_footer_gap
+    style.footer_sfnt_font = @default_sfnt_font
+    style.footer_font_size = @default_font_size
+    style
   end
 
   def get_block_node_style(tag)
