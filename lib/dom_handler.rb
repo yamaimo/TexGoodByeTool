@@ -2,16 +2,26 @@
 
 require 'ox'
 
+require_relative 'typeset_margin'
+require_relative 'typeset_padding'
 require_relative 'typeset_font'
 
 class DomHandler
 
-  # 未登録のノードを処理する
-  class UnknownNodeHandler
+  # ハンドラー未登録の場合に処理をする
+  class DefaultHandler
+
+    def create_new_page(typeset_document)
+      puts "[warning] page handler is not registered."
+      typeset_document.new_page(TypesetMargin.zero_margin, TypesetPadding.zero_padding, 0)
+    end
 
     def handle_node(node, typeset_document)
-      unknown_value = node.is_a?(Ox::Node) ? node.value : node
-      puts "[unknown] #{unknown_value}"
+      puts "[warning] node handler for #{node.value} is not registered."
+    end
+
+    def handle_text(text, typeset_document, ignore_line_feed)
+      puts "[warning] text handler is not registered."
     end
 
   end
@@ -20,7 +30,7 @@ class DomHandler
     @page_handler = nil
     @node_handlers = {}
     @text_handler = nil
-    @unknown_node_handler = UnknownNodeHandler.new
+    @default_handler = DefaultHandler.new
 
     # FIXME: text handlerがボックスの設定を参照できるようにした方がよさそう
     # chain of responsibilityで上位に問い合わせていく
@@ -44,7 +54,8 @@ class DomHandler
   end
 
   def create_new_page(typeset_document)
-    @page_handler.create_new_page(typeset_document)
+    page_handler = @page_handler || @default_handler
+    page_handler.create_new_page(typeset_document)
   end
 
   def handle_dom(dom, typeset_document)
@@ -56,10 +67,10 @@ class DomHandler
   def dispatch_node_handling(node, typeset_document)
     if node.is_a?(Ox::Node)
       tag = node.value
-      node_handler = @node_handlers[tag] || @unknown_node_handler
+      node_handler = @node_handlers[tag] || @default_handler
       node_handler.handle_node(node, typeset_document)
     elsif node.is_a?(String)
-      text_handler = @text_handler || @unknown_node_handler
+      text_handler = @text_handler || @default_handler
       text_handler.handle_text(node, typeset_document, @ignore_line_feed)
     else
       @unknown_node_handler.handle_node(node.to_s, typeset_document)
