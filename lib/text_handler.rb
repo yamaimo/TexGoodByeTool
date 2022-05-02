@@ -6,7 +6,7 @@ class TextHandler
 
   def self.add_to(dom_handler)
     handler = self.new(dom_handler)
-    dom_handler.register_text_handler(tag, handler)
+    dom_handler.register_text_handler(handler)
     handler
   end
 
@@ -53,7 +53,7 @@ class TextHandler
       # 改ページ処理
       if box.height > box.allocated_height
         last_line = box.pop
-        new_page = @dom_handler.create_new_page
+        new_page = @dom_handler.create_new_page(typeset_document)
         new_box = new_page.new_box(box.margin, box.padding, box.line_gap)
         new_line = new_box.new_line
         while char = last_line.shift

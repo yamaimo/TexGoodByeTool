@@ -1,5 +1,7 @@
 # ブロック要素の処理
 
+require_relative 'typeset_font'
+
 class BlockNodeHandler
 
   def self.add_to(dom_handler, tag, block_node_style)

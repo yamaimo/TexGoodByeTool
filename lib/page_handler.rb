@@ -1,6 +1,6 @@
 # ページを処理する
 
-require_relative 'typset_font'
+require_relative 'typeset_font'
 
 class PageHandler
 
@@ -15,8 +15,9 @@ class PageHandler
   end
 
   def create_new_page(typeset_document)
-    typeset_document.new_page(@style.margin, @style.padding, @style.to_footer_gap)
+    new_page = typeset_document.new_page(@style.margin, @style.padding, @style.to_footer_gap)
     add_page_number(typeset_document)
+    new_page
   end
 
   private
@@ -28,7 +29,7 @@ class PageHandler
 
     footer = typeset_document.current_page.footer
     line = footer.new_line
-    font = TypesetFont.new(@style.footer_sfnt_font, @sytle.footer_font_size)
+    font = TypesetFont.new(@style.footer_sfnt_font, @style.footer_font_size)
     # 右揃えできるように、フォント設定は最後に左端に追加する
 
     page_number_str.each_char do |char|

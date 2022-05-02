@@ -8,9 +8,16 @@ require_relative 'typeset_margin'
 require_relative 'typeset_padding'
 require_relative 'typeset_font'
 
-class MarkdownParser
+require_relative 'dom_handler'
+require_relative 'block_node_style'
+require_relative 'block_node_handler'
+require_relative 'inline_node_style'
+require_relative 'inline_node_handler'
+require_relative 'text_handler'
+require_relative 'page_style'
+require_relative 'page_handler'
 
-  HANGING_CHARS = ")]}>,.;:!?）」』、。；：！？ぁぃぅぇぉっゃゅょァィゥェォッャュョ"
+class MarkdownParser
 
   def initialize(width, height, default_sfnt_font, default_font_size, default_line_gap)
     @width = width
@@ -19,8 +26,8 @@ class MarkdownParser
     @default_sfnt_font = default_sfnt_font
     @default_font_size = default_font_size
     @default_line_gap = default_line_gap
-    @default_margin = TypesetMargin.new
-    @default_padding = TypesetPadding.new
+    @default_margin = TypesetMargin.zero_margin
+    @default_padding = TypesetPadding.zero_padding
 
     @page_margin = @default_margin
     @page_padding = @default_padding
@@ -85,9 +92,10 @@ class MarkdownParser
 
     html = markdown_to_html(markdown)
     dom = html_to_dom(html)
-    dom.each do |node|
-      handle_node(node, document)
-    end
+
+    dom_handler = setup_dom_handler()
+    dom_handler.create_new_page(document) # 1ページ作っておく
+    dom_handler.handle_dom(dom, document)
 
     document
   end
@@ -106,8 +114,6 @@ class MarkdownParser
 
   def create_typeset_document
     document = TypesetDocument.new(@width, @height)
-    document.new_page(@page_margin, @page_padding, @to_footer_gap)  # 1ページ作っておく
-    add_page_number(document)
     document.add_font(@default_sfnt_font)
     @sfnt_font.each do |tag, font|
       document.add_font(font)
@@ -115,229 +121,75 @@ class MarkdownParser
     document
   end
 
-  def handle_node(node, document)
-    if node.is_a?(Ox::Node)
-      case node.value
-      when /^h[1-6]$/
-        handle_header(node, document)
-      when "p"
-        handle_paragraph(node, document)
-      when "pre"
-        handle_preformatted(node, document)
-      when "em"
-        handle_emphasis(node, document)
-      when "strong"
-        handle_strong(node, document)
-      when "code"
-        handle_code(node, document)
-      else
-        handle_unknown("<#{node.value}>")
+  def setup_dom_handler
+    dom_handler = DomHandler.new(@default_sfnt_font, @default_font_size)
+
+    # header
+    (1..6).each do |level|
+      tag = "h#{level}"
+      style = get_block_node_style(tag)
+      if level == 1
+        style.begin_new_page = true
       end
-    elsif node.is_a?(String)
-      handle_string(node, document)
-    else
-      handle_unknown(node)
+      BlockNodeHandler.add_to(dom_handler, tag, style)
     end
+
+    # paragraph
+    tag = "p"
+    style = get_block_node_style(tag)
+    style.indent = 1
+    BlockNodeHandler.add_to(dom_handler, tag, style)
+
+    # preformatted
+    tag = "pre"
+    style = get_block_node_style(tag)
+    BlockNodeHandler.add_to(dom_handler, tag, style)
+
+    # emphasis
+    tag = "em"
+    style = get_inline_node_style(tag)
+    InlineNodeHandler.add_to(dom_handler, tag, style)
+
+    # strong
+    tag = "strong"
+    style = get_inline_node_style(tag)
+    InlineNodeHandler.add_to(dom_handler, tag, style)
+
+    # code
+    tag = "code"
+    style = get_inline_node_style(tag)
+    style.ignore_line_feed = false
+    InlineNodeHandler.add_to(dom_handler, tag, style)
+
+    # テキスト
+    TextHandler.add_to(dom_handler)
+
+    # ページ
+    page_style = PageStyle.new
+    page_style.margin = @page_margin
+    page_style.padding = @page_padding
+    page_style.to_footer_gap = @to_footer_gap
+    page_style.footer_sfnt_font = @default_sfnt_font
+    page_style.footer_font_size = @default_font_size
+    PageHandler.add_to(dom_handler, page_style)
+
+    dom_handler
   end
 
-  def handle_header(header, document)
-    if (header.value == "h1") && (! document.current_page.empty?)
-      document.new_page(@page_margin, @page_padding, @to_footer_gap)
-      add_page_number(document)
-    end
-
-    sfnt_font = self.get_sfnt_font(header.value)
-    font_size = self.get_font_size(header.value)
-    line_gap = self.get_line_gap(header.value)
-    margin = self.get_margin(header.value)
-    padding = self.get_padding(header.value)
-
-    box = document.current_page.new_box(margin, padding, line_gap)
-    line = box.new_line
-    font = TypesetFont.new(sfnt_font, font_size)
-    line.push font.get_font_set_operation
-
-    @typeset_font_stack.push font
-    header.each do |child|
-      handle_node(child, document)
-    end
-    @typeset_font_stack.pop
+  def get_block_node_style(tag)
+    style = BlockNodeStyle.new
+    style.sfnt_font = get_sfnt_font(tag)
+    style.font_size = get_font_size(tag)
+    style.line_gap = get_line_gap(tag)
+    style.margin = get_margin(tag)
+    style.padding = get_padding(tag)
+    style
   end
 
-  def handle_paragraph(paragraph, document)
-    sfnt_font = self.get_sfnt_font(paragraph.value)
-    font_size = self.get_font_size(paragraph.value)
-    line_gap = self.get_line_gap(paragraph.value)
-    margin = self.get_margin(paragraph.value)
-    padding = self.get_padding(paragraph.value)
-
-    box = document.current_page.new_box(margin, padding, line_gap)
-    line = box.new_line
-    font = TypesetFont.new(sfnt_font, font_size)
-    line.push font.get_font_set_operation
-    line.push font.get_space(1) # 行頭インデント
-
-    @typeset_font_stack.push font
-    paragraph.each do |child|
-      handle_node(child, document)
-    end
-    @typeset_font_stack.pop
-  end
-
-  def handle_preformatted(preformatted, document)
-    sfnt_font = self.get_sfnt_font(preformatted.value)
-    font_size = self.get_font_size(preformatted.value)
-    line_gap = self.get_line_gap(preformatted.value)
-    margin = self.get_margin(preformatted.value)
-    padding = self.get_padding(preformatted.value)
-
-    box = document.current_page.new_box(margin, padding, line_gap)
-    line = box.new_line
-    font = TypesetFont.new(sfnt_font, font_size)
-    line.push font.get_font_set_operation
-
-    @typeset_font_stack.push font
-    preformatted.each do |child|
-      handle_node(child, document)
-    end
-    @typeset_font_stack.pop
-  end
-
-  def handle_emphasis(emphasis, document)
-    sfnt_font = self.get_sfnt_font(emphasis.value)
-
-    line = document.current_page.current_box.current_line
-    prev_font = @typeset_font_stack[-1]
-    font = TypesetFont.new(sfnt_font, prev_font.size)
-    line.push font.get_font_set_operation
-
-    @typeset_font_stack.push font
-    emphasis.each do |string|
-      # emphasisの下はstringのみ
-      handle_string(string, document)
-    end
-    @typeset_font_stack.pop
-
-    line = document.current_page.current_box.current_line
-    line.push prev_font.get_font_set_operation
-  end
-
-  def handle_strong(strong, document)
-    sfnt_font = self.get_sfnt_font(strong.value)
-
-    line = document.current_page.current_box.current_line
-    prev_font = @typeset_font_stack[-1]
-    font = TypesetFont.new(sfnt_font, prev_font.size)
-    line.push font.get_font_set_operation
-
-    @typeset_font_stack.push font
-    strong.each do |string|
-      # strongの下はstringのみ
-      handle_string(string, document)
-    end
-    @typeset_font_stack.pop
-
-    line = document.current_page.current_box.current_line
-    line.push prev_font.get_font_set_operation
-  end
-
-  def handle_code(code, document)
-    sfnt_font = self.get_sfnt_font(code.value)
-
-    line = document.current_page.current_box.current_line
-    prev_font = @typeset_font_stack[-1]
-    font = TypesetFont.new(sfnt_font, prev_font.size)
-    line.push font.get_font_set_operation
-
-    @typeset_font_stack.push font
-    code.each do |string|
-      # codeの下はstringのみ
-      # また、改行コードではちゃんと改行する
-      handle_string(string, document, ignore_line_feed: false)
-    end
-    @typeset_font_stack.pop
-
-    line = document.current_page.current_box.current_line
-    line.push prev_font.get_font_set_operation
-  end
-
-  def handle_string(string, document, ignore_line_feed: true)
-    font = @typeset_font_stack[-1]
-    string.each_char do |char|
-      if (char == "\n") && ignore_line_feed
-        next
-      end
-
-      page = document.current_page
-      box = page.current_box
-      line = box.current_line
-
-      if char != "\n"
-        line.push font.get_typeset_char(char)
-      else
-        if line.height == 0
-          # 高さを確保しておく
-          line.push font.get_strut
-        end
-        line = box.new_line
-        line.push font.get_font_set_operation
-      end
-
-      # 改行処理
-      if line.width > line.allocated_width
-        last_char = line.pop
-        if HANGING_CHARS.include?(last_char.to_s)
-          # 元に戻して改行しない
-          # FIXME: 複数文字続く場合、はみ出しが大きくなる
-          line.push last_char
-        else
-          new_line = document.current_page.current_box.new_line
-          new_line.push font.get_font_set_operation
-          new_line.push last_char
-        end
-      end
-
-      # 改ページ処理
-      if box.height > box.allocated_height
-        last_line = box.pop
-        new_page = document.new_page(@page_margin, @page_padding, @to_footer_gap)
-        add_page_number(document)
-        new_box = new_page.new_box(box.margin, box.padding, box.line_gap)
-        new_line = new_box.new_line
-        while char = last_line.shift
-          new_line.push char
-        end
-      end
-    end
-    # FIXME: rescue_font対応はまだ
-    # FIXME: 禁則処理とか
-    # FIXME: "「"で始まる場合は2分空きにしたり
-  end
-
-  def handle_unknown(string)
-    puts "[unknown] #{string}"
-  end
-
-  def add_page_number(document)
-    page_number = document.page_count
-    is_odd_page = page_number % 2 == 1
-    page_number_str = page_number.to_s
-
-    footer = document.current_page.footer
-    line = footer.new_line
-    font = TypesetFont.new(@default_sfnt_font, @default_font_size)
-    # 右揃えできるように、フォント設定は最後に左端に追加する
-
-    page_number_str.each_char do |char|
-      line.push font.get_typeset_char(char)
-    end
-
-    if is_odd_page
-      space = line.allocated_width - line.width
-      space_as_char_count = space / @default_font_size
-      line.unshift font.get_space(space_as_char_count)
-    end
-    line.unshift font.get_font_set_operation
+  def get_inline_node_style(tag)
+    style = InlineNodeStyle.new
+    style.sfnt_font = get_sfnt_font(tag)
+    style
   end
 
 end

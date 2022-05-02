@@ -2,6 +2,8 @@
 
 require 'ox'
 
+require_relative 'typeset_font'
+
 class DomHandler
 
   # 未登録のノードを処理する
@@ -14,13 +16,15 @@ class DomHandler
 
   end
 
-  def initialize(default_font)
+  def initialize(default_sfnt_font, default_font_size)
     @node_handlers = {}
     @text_handler = nil
     @page_handler = nil
     @unknown_node_handler = UnknownNodeHandler.new
+
     # FIXME: text handlerがボックスの設定を参照できるようにした方がよさそう
     # chain of responsibilityで上位に問い合わせていく
+    default_font = TypesetFont.new(default_sfnt_font, default_font_size)
     @typeset_font_stack = [default_font]
     @ignore_line_feed = true
   end
@@ -128,7 +132,7 @@ if __FILE__ == $0
 
   end
 
-  dom_handler = DomHandler.new(nil) # ここではfontは使わない
+  dom_handler = DomHandler.new(nil, nil) # ここではfontは使わない
   PrintNodeHandler.add_to(dom_handler, "h1")
   PrintNodeHandler.add_to(dom_handler, "p")
   PrintNodeHandler.add_to(dom_handler, "text")
