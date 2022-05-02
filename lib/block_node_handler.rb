@@ -3,17 +3,15 @@
 class BlockNodeHandler
 
   def self.add_to(dom_handler, tag, block_node_style)
-    handler = self.new(block_node_style)
+    handler = self.new(dom_handler, block_node_style)
     dom_handler.register_node_handler(tag, handler)
     handler
   end
 
-  def initialize(block_node_style)
+  def initialize(dom_handler, block_node_style)
+    @dom_handler = dom_handler
     @style = block_node_style
-    @dom_handler = nil
   end
-
-  attr_writer :dom_handler
 
   def handle_node(block_node, typeset_document)
     if @style.begin_new_page? && (! typeset_document.current_page.empty?)
