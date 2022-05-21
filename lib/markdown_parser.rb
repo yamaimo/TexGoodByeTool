@@ -3,6 +3,8 @@
 require 'redcarpet'
 require 'ox'
 
+require_relative 'setting'
+
 require_relative 'typeset_document'
 require_relative 'typeset_margin'
 require_relative 'typeset_padding'
@@ -19,72 +21,9 @@ require_relative 'text_handler'
 
 class MarkdownParser
 
-  def initialize(width, height, default_sfnt_font, default_font_size, default_line_gap)
-    @width = width
-    @height = height
-
-    @default_sfnt_font = default_sfnt_font
-    @default_font_size = default_font_size
-    @default_line_gap = default_line_gap
-    @default_margin = TypesetMargin.zero_margin
-    @default_padding = TypesetPadding.zero_padding
-
-    @page_margin = @default_margin
-    @page_padding = @default_padding
-    @to_footer_gap = 0
-
-    @sfnt_font = {}
-    @font_size = {}
-    @line_gap = {}
-    @margin = {}
-    @padding = {}
-
-    @typeset_font_stack = []
-  end
-
-  attr_accessor :width, :height
-  attr_accessor :default_sfnt_font, :default_font_size, :default_line_gap
-  attr_accessor :default_margin, :default_padding
-  attr_accessor :page_margin, :page_padding, :to_footer_gap
-
-  def set_sfnt_font(tag, sfnt_font)
-    @sfnt_font[tag] = sfnt_font
-  end
-
-  def set_font_size(tag, font_size)
-    @font_size[tag] = font_size
-  end
-
-  def set_line_gap(tag, line_gap)
-    @line_gap[tag] = line_gap
-  end
-
-  def set_margin(tag, margin)
-    @margin[tag] = margin
-  end
-
-  def set_padding(tag, padding)
-    @padding[tag] = padding
-  end
-
-  def get_sfnt_font(tag)
-    @sfnt_font[tag] || @default_sfnt_font
-  end
-
-  def get_font_size(tag)
-    @font_size[tag] || @default_font_size
-  end
-
-  def get_line_gap(tag)
-    @line_gap[tag] || @default_line_gap
-  end
-
-  def get_margin(tag)
-    @margin[tag] || @default_margin
-  end
-
-  def get_padding(tag)
-    @padding[tag] || @default_padding
+  def initialize(style, fonts)
+    @style = style
+    @fonts = fonts
   end
 
   def parse(markdown)
@@ -102,6 +41,88 @@ class MarkdownParser
 
   private
 
+  def default_sfnt_font
+    default_font_name = @style.document.default_font_name
+    @fonts[default_font_name].sfnt_font
+  end
+
+  def default_font_size
+    @style.document.default_font_size
+  end
+
+  def default_line_gap
+    @style.document.default_line_gap
+  end
+
+  def default_margin
+    TypesetMargin.zero_margin
+  end
+
+  def default_padding
+    TypesetPadding.zero_padding
+  end
+
+  def get_sfnt_font(tag)
+    font_name = if @style.blocks.has_key?(tag)
+                  @style.blocks[tag].font_name
+                elsif @style.inlines.has_key?(tag)
+                  @style.inlines[tag].font_name
+                else
+                  Setting::Style::DEFAULT
+                end
+
+    if font_name != Setting::Style::DEFAULT
+      @fonts[font_name].sfnt_font
+    else
+      default_sfnt_font
+    end
+  end
+
+  def get_font_size(tag)
+    # 今のところフォントサイズはblockでのみ指定可能
+    font_size = @style.blocks[tag].font_size
+    if font_size == Setting::Style::DEFAULT
+      font_size = default_font_size
+    end
+    font_size
+  end
+
+  def get_line_gap(tag)
+    line_gap = @style.blocks[tag].line_gap
+    if line_gap == Setting::Style::DEFAULT
+      line_gap = default_line_gap
+    end
+    line_gap
+  end
+
+  def get_margin(tag)
+    margin = @style.blocks[tag].margin
+    if margin == Setting::Style::DEFAULT
+      margin = default_margin
+    end
+    margin
+  end
+
+  def get_padding(tag)
+    padding = @style.blocks[tag].padding
+    if padding == Setting::Style::DEFAULT
+      padding = default_padding
+    end
+    padding
+  end
+
+  def create_typeset_document
+    document = TypesetDocument.new(@style.document.width, @style.document.height)
+    document.add_font(default_sfnt_font)
+    @style.blocks.each_key do |tag|
+      document.add_font(get_sfnt_font(tag))
+    end
+    @style.inlines.each_key do |tag|
+      document.add_font(get_sfnt_font(tag))
+    end
+    document
+  end
+
   def markdown_to_html(markdown)
     redcarpet = Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true)
     html = redcarpet.render markdown
@@ -112,58 +133,24 @@ class MarkdownParser
     dom = Ox.load(html, skip: :skip_none)  # 改行や空白をスキップしない
   end
 
-  def create_typeset_document
-    document = TypesetDocument.new(@width, @height)
-    document.add_font(@default_sfnt_font)
-    @sfnt_font.each do |tag, font|
-      document.add_font(font)
-    end
-    document
-  end
-
   def setup_dom_handler
-    dom_handler = DomHandler.new(@default_sfnt_font, @default_font_size)
+    dom_handler = DomHandler.new(default_sfnt_font, default_font_size)
 
     # ページ
     style = get_page_style
     PageHandler.add_to(dom_handler, style)
 
-    # header
-    (1..6).each do |level|
-      tag = "h#{level}"
-      style = get_block_node_style(tag)
-      if level == 1
-        style.begin_new_page = true
-      end
+    # ブロック
+    @style.blocks.each do |tag, block|
+      style = get_block_node_style(tag, block)
       BlockNodeHandler.add_to(dom_handler, tag, style)
     end
 
-    # paragraph
-    tag = "p"
-    style = get_block_node_style(tag)
-    style.indent = 1
-    BlockNodeHandler.add_to(dom_handler, tag, style)
-
-    # preformatted
-    tag = "pre"
-    style = get_block_node_style(tag)
-    BlockNodeHandler.add_to(dom_handler, tag, style)
-
-    # emphasis
-    tag = "em"
-    style = get_inline_node_style(tag)
-    InlineNodeHandler.add_to(dom_handler, tag, style)
-
-    # strong
-    tag = "strong"
-    style = get_inline_node_style(tag)
-    InlineNodeHandler.add_to(dom_handler, tag, style)
-
-    # code
-    tag = "code"
-    style = get_inline_node_style(tag)
-    style.ignore_line_feed = false
-    InlineNodeHandler.add_to(dom_handler, tag, style)
+    # インライン
+    @style.inlines.each do |tag, inline|
+      style = get_inline_node_style(tag, inline)
+      InlineNodeHandler.add_to(dom_handler, tag, style)
+    end
 
     # テキスト
     TextHandler.add_to(dom_handler)
@@ -173,27 +160,38 @@ class MarkdownParser
 
   def get_page_style
     style = PageStyle.new
-    style.margin = @page_margin
-    style.padding = @page_padding
-    style.to_footer_gap = @to_footer_gap
-    style.footer_sfnt_font = @default_sfnt_font
-    style.footer_font_size = @default_font_size
+    if @style.page.margin != Setting::Style::DEFAULT
+      style.margin = @style.page.margin
+    else
+      style.margin = default_margin
+    end
+    if @style.page.padding != Setting::Style::DEFAULT
+      style.padding = @style.page.padding
+    else
+      style.padding = default_margin
+    end
+    style.to_footer_gap = @style.page.to_footer_gap
+    style.footer_sfnt_font = default_sfnt_font
+    style.footer_font_size = default_font_size
     style
   end
 
-  def get_block_node_style(tag)
+  def get_block_node_style(tag, block)
     style = BlockNodeStyle.new
     style.sfnt_font = get_sfnt_font(tag)
     style.font_size = get_font_size(tag)
     style.line_gap = get_line_gap(tag)
     style.margin = get_margin(tag)
     style.padding = get_padding(tag)
+    style.begin_new_page = block.begin_new_page
+    style.indent = block.indent
     style
   end
 
-  def get_inline_node_style(tag)
+  def get_inline_node_style(tag, inline)
     style = InlineNodeStyle.new
     style.sfnt_font = get_sfnt_font(tag)
+    style.ignore_line_feed = inline.ignore_line_feed
     style
   end
 
@@ -201,7 +199,7 @@ end
 
 if __FILE__ == $0
   require_relative 'length_extension'
-  require_relative 'sfnt_font'
+  require_relative 'setting_dsl'
   require_relative 'pdf_writer'
 
   using LengthExtension
@@ -247,42 +245,77 @@ if __FILE__ == $0
     #{File.read "sample.md"}
   END_OF_MARKDOWN
 
-  # A5
-  page_width = 148.mm
-  page_height = 210.mm
+  setting_str = <<~END_OF_SETTING
+    target "parse_sample" do
+      output "parse_sample.pdf"
+      sources "hoge.md"
+      style "normal"
+    end
 
-  # IPA明朝
-  ipa_mincho = SfntFont.load('ipaexm.ttf')
+    default_target "parse_sample"
 
-  # IPAゴシック
-  ipa_gothic = SfntFont.load('ipaexg.ttf')
+    style "normal" do
+      document do
+        paper width: 148.mm, height: 210.mm
+        default_font name: "ipa_mincho", size: 10.pt
+        default_line_gap (10.pt / 2)
+      end
 
-  # Ricty, 10pt
-  ricty = SfntFont.load('RictyDiminished-Regular.ttf')
+      page do
+        margin top: 1.cm, right: 1.cm, bottom: 1.5.cm, left: 1.cm
+      end
 
-  # フォントは10pt
-  font_size = 10.pt
-  line_gap = font_size / 2
+      block "h1" do
+        margin bottom: 14.pt
+        font name: "ipa_gothic", size: 14.pt
+      end
 
-  parser = MarkdownParser.new(page_width, page_height, ipa_mincho, font_size, line_gap)
+      block "h2" do
+        margin top: 10.pt, bottom: 7.pt
+        font name: "ipa_gothic", size: 12.pt
+      end
 
-  parser.page_margin = TypesetMargin.new(top: 1.cm, right: 1.cm, bottom: 1.cm, left: 1.cm)
-  parser.set_margin("h1", TypesetMargin.new(bottom: 14.pt))
-  parser.set_sfnt_font("h1", ipa_gothic)
-  parser.set_font_size("h1", 14.pt)
-  parser.set_margin("h2", TypesetMargin.new(top: 10.pt, bottom: 7.pt))
-  parser.set_sfnt_font("h2", ipa_gothic)
-  parser.set_font_size("h2", 12.pt)
-  parser.set_margin("p", TypesetMargin.new(top: 7.pt, bottom: 7.pt))
-  parser.set_margin("pre", TypesetMargin.new(top: 15.pt, bottom: 15.pt))
-  parser.set_line_gap("pre", 2.pt)
-  parser.set_sfnt_font("em", ipa_gothic)
-  parser.set_sfnt_font("strong", ipa_gothic)
-  parser.set_sfnt_font("code", ricty)
+      block "p" do
+        margin top: 7.pt, bottom: 7.pt
+      end
 
+      block "pre" do
+        margin top: 15.pt, bottom: 15.pt
+        line_gap 2.pt
+      end
+
+      inline "em" do
+        font name: "ipa_gothic"
+      end
+
+      inline "strong" do
+        font name: "ipa_gothic"
+      end
+
+      inline "code" do
+        font name: "ricty"
+      end
+    end
+
+    font "ipa_mincho" do
+      file "ipaexm.ttf"
+    end
+
+    font "ipa_gothic" do
+      file "ipaexg.ttf"
+    end
+
+    font "ricty" do
+      file "RictyDiminished-Regular.ttf"
+    end
+  END_OF_SETTING
+
+  setting = SettingDsl.read(setting_str)
+
+  parser = MarkdownParser.new(setting.styles["normal"], setting.fonts)
   typeset_document = parser.parse(markdown)
   pdf_document = typeset_document.to_pdf_document
 
-  writer = PdfWriter.new("parse_sample.pdf")
+  writer = PdfWriter.new(setting.targets["parse_sample"].output)
   writer.write(pdf_document)
 end
