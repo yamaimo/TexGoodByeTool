@@ -185,14 +185,17 @@ class Setting
     @targets = {}
     @styles = {}
     @fonts = {}
+    @default_target = nil
   end
 
   attr_accessor :targets, :styles, :fonts
+  attr_accessor :default_target
 
   def raise_if_invalid
     @targets.values.each(&:raise_if_invalid)
     @styles.values.each(&:raise_if_invalid)
     @fonts.values.each(&:raise_if_invalid)
+    raise "default target is not specified." if @default_target.nil?
   end
 
 end
@@ -247,6 +250,8 @@ if __FILE__ == $0
 
   font = setting.fonts["ricty"] = Setting::Font.new
   font.file = "RictyDiminished-Regular.ttf"
+
+  setting.default_target = "sample"
 
   # 設定のチェック
   setting.raise_if_invalid
@@ -311,4 +316,6 @@ if __FILE__ == $0
     puts "  file: #{font.file} (#{sfnt_font.path})"
     puts "  index: #{font.index}" if font.index
   end
+
+  puts "default target: #{setting.default_target}"
 end

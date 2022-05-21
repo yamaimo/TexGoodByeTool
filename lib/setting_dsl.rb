@@ -195,6 +195,10 @@ class SettingDsl
     dsl.instance_eval(&block)
   end
 
+  def default_target(name)
+    @setting.default_target = name
+  end
+
 end
 
 if __FILE__ == $0
@@ -267,6 +271,8 @@ if __FILE__ == $0
     font "ricty" do
       file "RictyDiminished-Regular.ttf"
     end
+
+    default_target "sample"
   END_OF_SETTING
 
   # DSLでの設定記述を読んで設定取得
@@ -332,4 +338,6 @@ if __FILE__ == $0
     puts "  file: #{font.file} (#{sfnt_font.path})"
     puts "  index: #{font.index}" if font.index
   end
+
+  puts "default target: #{setting.default_target}"
 end
