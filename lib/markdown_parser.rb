@@ -252,6 +252,8 @@ if __FILE__ == $0
       style "normal"
     end
 
+    default_target "parse_sample"
+
     style "normal" do
       document do
         paper width: 148.mm, height: 210.mm
