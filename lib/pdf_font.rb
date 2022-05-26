@@ -18,8 +18,8 @@ class PdfFont
       @font_descriptor = font_descriptor
     end
 
-    def attach_content_to(pool)
-      @font_descriptor.attach_content_to(pool)
+    def attach_to(binder)
+      @font_descriptor.attach_to(binder)
 
       subtype = case @sfnt_font.type
                 when SfntFontType::OPEN_TYPE
@@ -30,7 +30,7 @@ class PdfFont
                   raise "Unknown type."
                 end
 
-      pool.attach_content(self, <<~END_OF_CID_FONT)
+      binder.attach(self, <<~END_OF_CID_FONT)
         <<
           /Type /Font
           /Subtype /#{subtype}
@@ -40,7 +40,7 @@ class PdfFont
             /Ordering (Identity)
             /Supplement 0
           >>
-          /FontDescriptor #{pool.get_ref(@font_descriptor)}
+          /FontDescriptor #{binder.get_ref(@font_descriptor)}
           /DW #{@sfnt_font.mode_width}
           /W [
             #{get_w_records.join("\n    ")}
@@ -86,8 +86,8 @@ class PdfFont
       @font_file = font_file
     end
 
-    def attach_content_to(pool)
-      @font_file.attach_content_to(pool)
+    def attach_to(binder)
+      @font_file.attach_to(binder)
 
       font_file_type = case @sfnt_font.type
                        when SfntFontType::OPEN_TYPE
@@ -111,7 +111,7 @@ class PdfFont
       # StemVは適切な値をとるのが難しいので太さを適当な大きさにしておく
       stem_v = @sfnt_font.weight / 5
 
-      pool.attach_content(self, <<~END_OF_FONT_DESCRIPTOR)
+      binder.attach(self, <<~END_OF_FONT_DESCRIPTOR)
         <<
           /Type /FontDescriptor
           /FontName /#{@sfnt_font.name}
@@ -122,7 +122,7 @@ class PdfFont
           /Flags #{flags}
           /CapHeight #{cap_height}
           /StemV #{stem_v}
-          /#{font_file_type} #{pool.get_ref(@font_file)}
+          /#{font_file_type} #{binder.get_ref(@font_file)}
         >>
       END_OF_FONT_DESCRIPTOR
     end
@@ -135,7 +135,7 @@ class PdfFont
       @sfnt_font = sfnt_font
     end
 
-    def attach_content_to(pool)
+    def attach_to(binder)
       stream = @sfnt_font.to_stream
       length = stream.bytesize
 
@@ -151,7 +151,7 @@ class PdfFont
                            raise "Unknown type."
                          end
 
-      pool.attach_content(self, <<~END_OF_FONT_FILE)
+      binder.attach(self, <<~END_OF_FONT_FILE)
         <<
           /Filter /FlateDecode
           /Length #{compressed_length}
@@ -173,7 +173,7 @@ class PdfFont
       @sfnt_font = sfnt_font
     end
 
-    def attach_content_to(pool)
+    def attach_to(binder)
       entry = @sfnt_font.gid_cache.filter{|cid, gid| gid != CmapTable::GID_NOT_FOUND}
       gid_to_cid_map = entry.map do |cid, gid|
         gid_hex_str = gid.to_hex_str
@@ -206,7 +206,7 @@ class PdfFont
       END_OF_TO_UNICODE_CMAP
       length = to_unicode_cmap.bytesize + "\n".bytesize
 
-      pool.attach_content(self, <<~END_OF_TO_UNICODE)
+      binder.attach(self, <<~END_OF_TO_UNICODE)
         <<
           /Length #{length}
         >>
@@ -229,9 +229,9 @@ class PdfFont
     @to_unicode = ToUnicode.new(sfnt_font)
   end
 
-  def attach_content_to(pool)
-    @cid_font.attach_content_to(pool)
-    @to_unicode.attach_content_to(pool)
+  def attach_to(binder)
+    @cid_font.attach_to(binder)
+    @to_unicode.attach_to(binder)
 
     name = @sfnt_font.name
     encoding = "Identity-H"
@@ -239,14 +239,14 @@ class PdfFont
       name = "#{name}-#{encoding}"
     end
 
-    pool.attach_content(self, <<~END_OF_FONT)
+    binder.attach(self, <<~END_OF_FONT)
       <<
         /Type /Font
         /Subtype /Type0
         /BaseFont /#{name}
         /Encoding /#{encoding}
-        /DescendantFonts [#{pool.get_ref(@cid_font)}]
-        /ToUnicode #{pool.get_ref(@to_unicode)}
+        /DescendantFonts [#{binder.get_ref(@cid_font)}]
+        /ToUnicode #{binder.get_ref(@to_unicode)}
       >>
     END_OF_FONT
   end
@@ -257,7 +257,7 @@ end
 
 if __FILE__ == $0
   require_relative 'sfnt_font'
-  require_relative 'pdf_object_pool'
+  require_relative 'pdf_object_binder'
 
   if ARGV.empty?
     puts "[Font file list] ----------"
@@ -277,10 +277,10 @@ if __FILE__ == $0
     puts "  glyph  : #{pdf_font.convert_to_gid(str)}"
   end
 
-  pool = PdfObjectPool.new
-  pdf_font.attach_content_to(pool)
+  binder = PdfObjectBinder.new
+  pdf_font.attach_to(binder)
 
-  pool.contents.each do |content|
-    puts content
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
   end
 end

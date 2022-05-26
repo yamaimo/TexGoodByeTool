@@ -297,7 +297,7 @@ end
 
 if __FILE__ == $0
   require_relative 'pdf_page'
-  require_relative 'pdf_object_pool'
+  require_relative 'pdf_object_binder'
 
   page_content = PdfPage::Content.new(nil)
 
@@ -369,10 +369,10 @@ if __FILE__ == $0
     pen.stroke oval
   end
 
-  pool = PdfObjectPool.new
-  page_content.attach_content_to(pool)
+  binder = PdfObjectBinder.new
+  page_content.attach_to(binder)
 
-  pool.contents.each do |content|
-    puts content
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
   end
 end

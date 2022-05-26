@@ -69,7 +69,7 @@ if __FILE__ == $0
   require_relative 'typeset_margin'
   require_relative 'typeset_padding'
   require_relative 'typeset_box'
-  require_relative 'pdf_object_pool'
+  require_relative 'pdf_object_binder'
 
   sfnt_font = SfntFont.load('ipaexm.ttf')
   font_size = 14
@@ -107,10 +107,10 @@ if __FILE__ == $0
 
   pdf_document = document.to_pdf_document
 
-  pool = PdfObjectPool.new
-  pdf_document.root.attach_content_to(pool)
+  binder = PdfObjectBinder.new
+  pdf_document.root.attach_to(binder)
 
-  pool.contents.each do |content|
-    puts content
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
   end
 end

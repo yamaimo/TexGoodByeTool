@@ -32,11 +32,11 @@ class PdfPage
       @operations.push "ET"
     end
 
-    def attach_content_to(pool)
+    def attach_to(binder)
       stream = @operations.join("\n")
       length = stream.bytesize + "\n".bytesize
 
-      pool.attach_content(self, <<~END_OF_CONTENT)
+      binder.attach(self, <<~END_OF_CONTENT)
         <<
           /Length #{length}
         >>
@@ -68,14 +68,14 @@ class PdfPage
     block.call(@content)
   end
 
-  def attach_content_to(pool)
-    @content.attach_content_to(pool)
+  def attach_to(binder)
+    @content.attach_to(binder)
 
-    pool.attach_content(self, <<~END_OF_PAGE)
+    binder.attach(self, <<~END_OF_PAGE)
       <<
         /Type /Page
-        /Parent #{pool.get_ref(@parent)}
-        /Contents [#{pool.get_ref(@content)}]
+        /Parent #{binder.get_ref(@parent)}
+        /Contents [#{binder.get_ref(@content)}]
       >>
     END_OF_PAGE
   end
@@ -86,7 +86,7 @@ if __FILE__ == $0
   require_relative 'sfnt_font'
   require_relative 'pdf_font'
   require_relative 'length_extension'
-  require_relative 'pdf_object_pool'
+  require_relative 'pdf_object_binder'
 
   if ARGV.empty?
     puts "[Font file list] ----------"
@@ -123,10 +123,10 @@ if __FILE__ == $0
       @resource.add_font(pdf_font)
     end
 
-    def attach_content_to(pool)
-      @pages.each{|page| page.attach_content_to(pool)}
+    def attach_to(binder)
+      @pages.each{|page| page.attach_to(binder)}
 
-      pool.attach_content(self, <<~END_OF_DOCUMENT)
+      binder.attach(self, <<~END_OF_DOCUMENT)
         <<
           /Type /Document
         >>
@@ -166,10 +166,10 @@ if __FILE__ == $0
     end
   end
 
-  pool = PdfObjectPool.new
-  document.attach_content_to(pool)
+  binder = PdfObjectBinder.new
+  document.attach_to(binder)
 
-  pool.contents.each do |content|
-    puts content
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
   end
 end

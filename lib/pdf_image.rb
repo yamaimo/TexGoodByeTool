@@ -39,7 +39,7 @@ class PdfImage
       "Image#{self.object_id}"
     end
 
-    def attach_content_to(pool)
+    def attach_to(binder)
       image = ChunkyPNG::Image.from_file(@path)
 
       mask_stream = get_mask_stream(image)
@@ -49,7 +49,7 @@ class PdfImage
       rgb_compressed = Zlib::Deflate.deflate(rgb_stream)
 
       image_mask = Object.new
-      pool.attach_content(image_mask, <<~END_OF_MASK)
+      binder.attach(image_mask, <<~END_OF_MASK)
         <<
           /Type /XObject
           /Subtype /Image
@@ -65,7 +65,7 @@ class PdfImage
         endstream
       END_OF_MASK
 
-      pool.attach_content(self, <<~END_OF_PNG)
+      binder.attach(self, <<~END_OF_PNG)
         <<
           /Type /XObject
           /Subtype /Image
@@ -73,7 +73,7 @@ class PdfImage
           /Height #{@height}
           /ColorSpace /DeviceRGB
           /BitsPerComponent 8
-          /Mask #{pool.get_ref(image_mask)}
+          /Mask #{binder.get_ref(image_mask)}
           /Filter /FlateDecode
           /Length #{rgb_compressed.bytesize}
         >>
@@ -176,7 +176,7 @@ end
 
 if __FILE__ == $0
   require_relative 'pdf_page'
-  require_relative 'pdf_object_pool'
+  require_relative 'pdf_object_binder'
 
   class ResourceMock
 
@@ -211,11 +211,11 @@ if __FILE__ == $0
     pen.paint pdf_image.id
   end
 
-  pool = PdfObjectPool.new
-  pdf_image.attach_content_to(pool)
-  page_content.attach_content_to(pool)
+  binder = PdfObjectBinder.new
+  pdf_image.attach_to(binder)
+  page_content.attach_to(binder)
 
-  pool.contents.each do |content|
-    puts content
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
   end
 end
