@@ -10,13 +10,13 @@ class PdfDocument
 
     attr_reader :page_tree
 
-    def attach_content_to(pool)
-      @page_tree.attach_content_to(pool)
+    def attach_to(binder)
+      @page_tree.attach_to(binder)
 
-      pool.attach_content(self, <<~END_OF_DOC_CATALOG)
+      binder.attach(self, <<~END_OF_DOC_CATALOG)
         <<
           /Type /Catalog
-          /Pages #{pool.get_ref(@page_tree)}
+          /Pages #{binder.get_ref(@page_tree)}
         >>
       END_OF_DOC_CATALOG
     end
@@ -39,16 +39,16 @@ class PdfDocument
 
     attr_reader :resource
 
-    def attach_content_to(pool)
-      @resource.attach_content_to(pool)
-      @pages.each {|page| page.attach_content_to(pool)}
+    def attach_to(binder)
+      @resource.attach_to(binder)
+      @pages.each {|page| page.attach_to(binder)}
 
-      pool.attach_content(self, <<~END_OF_PAGE_TREE)
+      binder.attach(self, <<~END_OF_PAGE_TREE)
         <<
           /Type /Pages
           /Count #{@pages.size}
-          /Kids [#{@pages.map{|page| pool.get_ref(page)}.join(' ')}]
-          /Resources #{pool.get_ref(@resource)}
+          /Kids [#{@pages.map{|page| binder.get_ref(page)}.join(' ')}]
+          /Resources #{binder.get_ref(@resource)}
           /MediaBox [0 0 #{@page_width} #{@page_height}]
         >>
       END_OF_PAGE_TREE
@@ -79,14 +79,14 @@ class PdfDocument
       @images[id]
     end
 
-    def attach_content_to(pool)
-      @fonts.each {|id, font| font.attach_content_to(pool)}
-      font_entries = @fonts.map{|id, font| "/#{id} #{pool.get_ref(font)}"}.join(' ')
+    def attach_to(binder)
+      @fonts.each {|id, font| font.attach_to(binder)}
+      font_entries = @fonts.map{|id, font| "/#{id} #{binder.get_ref(font)}"}.join(' ')
 
-      @images.each {|id, image| image.attach_content_to(pool)}
-      image_entries = @images.map{|id, image| "/#{id} #{pool.get_ref(image)}"}.join(' ')
+      @images.each {|id, image| image.attach_to(binder)}
+      image_entries = @images.map{|id, image| "/#{id} #{binder.get_ref(image)}"}.join(' ')
 
-      pool.attach_content(self, <<~END_OF_RESOURCE)
+      binder.attach(self, <<~END_OF_RESOURCE)
         <<
           /Font << #{font_entries} >>
           /XObject << #{image_entries} >>
@@ -120,7 +120,7 @@ end
 
 if __FILE__ == $0
   require_relative 'length_extension'
-  require_relative 'pdf_object_pool'
+  require_relative 'pdf_object_binder'
 
   class PdfPageMock
 
@@ -130,11 +130,11 @@ if __FILE__ == $0
 
     attr_writer :parent
 
-    def attach_content_to(pool)
-      pool.attach_content(self, <<~END_OF_PAGE)
+    def attach_to(binder)
+      binder.attach(self, <<~END_OF_PAGE)
         <<
           /Type /Page
-          /Parent #{pool.get_ref(@parent)}
+          /Parent #{binder.get_ref(@parent)}
         >>
       END_OF_PAGE
     end
@@ -151,8 +151,8 @@ if __FILE__ == $0
       "Font#{self.object_id}"
     end
 
-    def attach_content_to(pool)
-      pool.attach_content(self, <<~END_OF_FONT)
+    def attach_to(binder)
+      binder.attach(self, <<~END_OF_FONT)
         <<
           /Type /Font
           /BaseFont /#{@name}
@@ -172,8 +172,8 @@ if __FILE__ == $0
       "Image#{self.object_id}"
     end
 
-    def attach_content_to(pool)
-      pool.attach_content(self, <<~END_OF_IMAGE)
+    def attach_to(binder)
+      binder.attach(self, <<~END_OF_IMAGE)
         <<
           /Type /XObject
           /Subtype /Image
@@ -198,10 +198,10 @@ if __FILE__ == $0
   document.add_image(PdfImageMock.new('image1'))
   document.add_image(PdfImageMock.new('image2'))
 
-  pool = PdfObjectPool.new
-  document.root.attach_content_to(pool)
+  binder = PdfObjectBinder.new
+  document.root.attach_to(binder)
 
-  pool.contents.each do |content|
-    puts content
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
   end
 end

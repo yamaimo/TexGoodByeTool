@@ -1,6 +1,6 @@
 # PDF出力
 
-require_relative 'pdf_object_pool'
+require_relative 'pdf_object_binder'
 
 class PdfWriter
 
@@ -80,19 +80,19 @@ class PdfWriter
       header = Header.new
       file.puts header
 
-      pool = PdfObjectPool.new
-      document.root.attach_content_to(pool)
+      binder = PdfObjectBinder.new
+      document.root.attach_to(binder)
 
       cross_ref_table = CrossRefTable.new
-      pool.contents.each do |content|
+      binder.serialized_objects.each do |serialized_object|
         cross_ref_table.add_entry(file.pos)
-        file.puts content
+        file.puts serialized_object
       end
 
       cross_ref_offset = file.pos
       file.puts cross_ref_table
 
-      root_ref = pool.get_ref(document.root)
+      root_ref = binder.get_ref(document.root)
       cross_ref_size = cross_ref_table.size
       trailer = Trailer.new(root_ref, cross_ref_size, cross_ref_offset)
       file.puts trailer
@@ -110,16 +110,16 @@ if __FILE__ == $0
 
   class PdfDocumentMock
     class Node
-      def attach_content_to(pool)
-        pool.attach_content(self, "<< >>")
+      def attach_to(binder)
+        binder.attach(self, "<< >>")
       end
     end
 
     class Root
-      def attach_content_to(pool)
+      def attach_to(binder)
         node = Node.new
-        node.attach_content_to(pool)
-        pool.attach_content(self, "<< /Child #{pool.get_ref(node)} >>")
+        node.attach_to(binder)
+        binder.attach(self, "<< /Child #{binder.get_ref(node)} >>")
       end
     end
 

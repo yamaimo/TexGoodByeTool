@@ -32,8 +32,7 @@ if __FILE__ == $0
   require_relative 'pdf_document'
   require_relative 'pdf_font'
   require_relative 'pdf_page'
-  require_relative 'pdf_writer'
-  require_relative 'pdf_object_pool'
+  require_relative 'pdf_object_binder'
 
   using LengthExtension
 
@@ -71,11 +70,11 @@ if __FILE__ == $0
     end
   end
 
-  pool = PdfObjectPool.new
+  binder = PdfObjectBinder.new
   # pageの内容だけ見る
-  page.attach_content_to(pool)
+  page.attach_to(binder)
 
-  pool.contents.each do |content|
-    puts content
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
   end
 end
