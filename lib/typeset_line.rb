@@ -46,8 +46,8 @@ if __FILE__ == $0
 
   class TextMock
 
-    def set_font(id, size)
-      STDOUT.puts "[set_font] id: #{id}, size: #{size}"
+    def set_font(pdf_font, size)
+      STDOUT.puts "[set_font] id: #{pdf_font.id}, size: #{size}"
     end
 
     def puts(str="")

@@ -6,12 +6,11 @@ class PdfPage
 
   class Content
 
-    def initialize(resource)
-      @resource = resource
+    def initialize
       @operations = []
     end
 
-    attr_reader :resource, :operations
+    attr_reader :operations
 
     def stack_graphic_state(&block)
       @operations.push "q"
@@ -26,7 +25,7 @@ class PdfPage
     def add_text(&block)
       @operations.push "BT"
 
-      text = PdfText.new(@resource, @operations)
+      text = PdfText.new(@operations)
       block.call(text)
 
       @operations.push "ET"
@@ -55,13 +54,12 @@ class PdfPage
   end
 
   def initialize
+    @content = Content.new
     @parent = nil
-    @content = nil
   end
 
   def parent=(parent)
     @parent = parent
-    @content = Content.new(@parent.resource)
   end
 
   def add_content(&block)
@@ -155,7 +153,7 @@ if __FILE__ == $0
   page.add_content do |content|
     content.move_origin 22.mm, 188.mm
     content.add_text do |text|
-      text.set_font pdf_font.id, 14
+      text.set_font pdf_font, 14
       text.set_leading 16
       ["ABCDE", "あいうえお", "斉斎齊齋", "\u{20B9F}\u{20D45}\u{20E6D}"].each do |str|
         text.puts str
