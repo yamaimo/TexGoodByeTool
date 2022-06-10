@@ -14,7 +14,8 @@ class TypesetFont
 
   def get_font_set_operation
     TypesetOperation.new do |text|
-      text.set_font @sfnt_font.id, @size
+      # FIXME: 本来はPdfFontが指定されるべき
+      text.set_font @sfnt_font, @size
     end
   end
 
@@ -46,8 +47,8 @@ if __FILE__ == $0
 
   class TextMock
 
-    def set_font(id, size)
-      puts "[set_font] id: #{id}, size: #{size}"
+    def set_font(pdf_font, size)
+      puts "[set_font] id: #{pdf_font.id}, size: #{size}"
     end
 
     def putc(char: nil, gid: 0)

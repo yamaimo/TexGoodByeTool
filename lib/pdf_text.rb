@@ -6,8 +6,7 @@ class PdfText
 
   using HexExtension
 
-  def initialize(resource, operations)
-    @resource = resource
+  def initialize(operations)
     @operations = operations
     @font = nil
   end
@@ -18,9 +17,11 @@ class PdfText
     @operations.push "  #{dx} #{dy} Td"
   end
 
-  def set_font(id, size)
-    @operations.push "  /#{id} #{size} Tf"
-    @font = @resource.get_font(id)
+  def set_font(pdf_font, size)
+    # NOTE: 今はここでpdf_fontに必要とされる機能がsfnt_fontと等しいので、
+    # sfnt_fontも指定可能（本来はpdf_fontのみが指定されるべき）
+    @operations.push "  /#{pdf_font.id} #{size} Tf"
+    @font = pdf_font
   end
 
   def set_leading(size)

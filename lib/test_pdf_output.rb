@@ -63,7 +63,7 @@ page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 22.mm, 188.mm
     content.add_text do |text|
-      text.set_font pdf_font.id, 14
+      text.set_font pdf_font, 14
       text.set_leading 16
       ["ABCDE", "あいうえお", "斉斎齊齋", "\u{20B9F}\u{20D45}\u{20E6D}"].each do |str|
         text.puts str
@@ -232,7 +232,7 @@ page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 70.mm, 190.mm
     content.add_text do |text|
-      text.set_font pdf_font.id, 14
+      text.set_font pdf_font, 14
       text.set_leading 16
       text.puts "雪だるまの後ろに文字を出力！"
       text.puts "マスクはちゃんと指定できてる？"
@@ -242,11 +242,11 @@ page.add_content do |content|
   image = PdfImage.new
   image.dpi = 350
   image.draw_on(content) do |pen|
-    pen.paint snowman_png.id, x: 80.mm, y: 210.mm
+    pen.paint snowman_png, x: 80.mm, y: 210.mm
   end
 
   content.add_text do |text|
-    text.set_font pdf_font.id, 10
+    text.set_font pdf_font, 10
     text.return_cursor dy: (- sfnt_font.descender * 10 / 1000.0) # descenderの分だけ上へ移動
     text.puts "原点はここ"
   end

@@ -65,7 +65,7 @@ if __FILE__ == $0
   page.add_content do |content|
     content.move_origin 22.mm, 188.mm
     content.add_text do |text|
-      text.set_font pdf_font.id, font_size
+      text.set_font pdf_font, font_size
       typeset_char.write_to(text)
     end
   end

@@ -128,13 +128,12 @@ class PdfImage
       @dpi = dpi
     end
 
-    def paint(id, x: 0, y: 0)
+    def paint(image, x: 0, y: 0)
       @content.stack_graphic_state do
         # 画像を出力すると、1pt x 1ptの矩形に出力される
         # 1pt = 1/72inなので、72dpi(=72px/in)のとき1px = 1/72in = 1pt
         # なので72dpiならwidth x heightに伸ばすといい
         # 解像度が違う場合はさらに72/dpi倍すると長さがあう
-        image = @content.resource.get_image(id)
         dpi = @dpi || image.dpi # 指定がなければ画像のdpiを使う
         scale = 72.0 / dpi
         x_scale = image.width * scale
@@ -154,7 +153,7 @@ class PdfImage
         y += y_offset
 
         @content.operations.push "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
-        @content.operations.push "/#{id} Do"
+        @content.operations.push "/#{image.id} Do"
       end
     end
 
@@ -188,14 +187,10 @@ if __FILE__ == $0
       @images[pdf_image.id] = pdf_image
     end
 
-    def get_image(id)
-      @images[id]
-    end
-
   end
 
   resource = ResourceMock.new
-  page_content = PdfPage::Content.new(resource)
+  page_content = PdfPage::Content.new
 
   pdf_image = PdfImage::Png.load('christmas_snowman.png')
   puts "path: #{pdf_image.path}"
@@ -208,7 +203,7 @@ if __FILE__ == $0
 
   image = PdfImage.new
   image.draw_on(page_content) do |pen|
-    pen.paint pdf_image.id
+    pen.paint pdf_image
   end
 
   binder = PdfObjectBinder.new

@@ -116,8 +116,8 @@ if __FILE__ == $0
         STDOUT.puts "  [return_cursor] dx: #{dx}, dy: #{dy}"
       end
 
-      def set_font(id, size)
-        STDOUT.puts "  [set_font] id: #{id}, size: #{size}"
+      def set_font(pdf_font, size)
+        STDOUT.puts "  [set_font] id: #{pdf_font.id}, size: #{size}"
       end
 
       def set_leading(size)
@@ -172,6 +172,7 @@ if __FILE__ == $0
 
   ["ABCDEあいうえお", "ほげほげ", "TeXグッバイしたい！"].each do |chars|
     line = box1.new_line
+    line.push typeset_font.get_font_set_operation
     chars.each_char do |char|
       line.push typeset_font.get_typeset_char(char)
     end

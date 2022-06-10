@@ -1,6 +1,10 @@
 # PDFドキュメント
 
+require 'forwardable'
+
 class PdfDocument
+
+  extend Forwardable
 
   class DocCatalog
 
@@ -9,10 +13,6 @@ class PdfDocument
       @named_destination = named_destination
       @outline = outline
     end
-
-    attr_reader :page_tree
-    attr_reader :named_destination
-    attr_reader :outline
 
     def attach_to(binder)
       @page_tree.attach_to(binder)
@@ -45,8 +45,6 @@ class PdfDocument
       pdf_page.parent = self
     end
 
-    attr_reader :resource
-
     def attach_to(binder)
       @resource.attach_to(binder)
       @pages.each {|page| page.attach_to(binder)}
@@ -75,16 +73,8 @@ class PdfDocument
       @fonts[pdf_font.id] = pdf_font
     end
 
-    def get_font(id)
-      @fonts[id]
-    end
-
     def add_image(pdf_image)
       @images[pdf_image.id] = pdf_image
-    end
-
-    def get_image(id)
-      @images[id]
     end
 
     def attach_to(binder)
@@ -107,17 +97,17 @@ class PdfDocument
   class NamedDestination
 
     def initialize
-      @destination = {}
+      @destinations = {}
     end
 
     def add_destination(name, pdf_destination)
       # nameはエンコードが必要な文字が含まれていないこと
       # （あとで修正したい）
-      @destination[name] = pdf_destination
+      @destinations[name] = pdf_destination
     end
 
     def attach_to(binder)
-      name_dest_lines = @destination.map do |name, dest|
+      name_dest_lines = @destinations.map do |name, dest|
         "  /#{name} #{dest.to_serialized_data(binder)}"
       end.join("\n")
 
@@ -172,39 +162,22 @@ class PdfDocument
   end
 
   def initialize(page_width, page_height)
-    resource = Resource.new
-    page_tree = PageTree.new(page_width, page_height, resource)
-    named_destination = NamedDestination.new
-    outline = Outline.new
-    @root = DocCatalog.new(page_tree, named_destination, outline)
+    @resource = Resource.new
+    @page_tree = PageTree.new(page_width, page_height, @resource)
+    @named_destination = NamedDestination.new
+    @outline = Outline.new
+    @root = DocCatalog.new(@page_tree, @named_destination, @outline)
   end
 
   attr_reader :root
 
-  # FIXME: 以下は委譲にしたい
-  # rootからreaderを取り除いて、各オブジェクトをdocumentで保持
-  # pdf_pageで下のオブジェクトを使ってるところがあるので、
-  # そこはdocumentから呼び出すようにする必要がある
+  def_delegators :@page_tree, :add_page
 
-  def add_page(pdf_page)
-    @root.page_tree.add_page(pdf_page)
-  end
+  def_delegators :@resource, :add_font, :add_image
 
-  def add_font(pdf_font)
-    @root.page_tree.resource.add_font(pdf_font)
-  end
+  def_delegators :@named_destination, :add_destination
 
-  def add_image(pdf_image)
-    @root.page_tree.resource.add_image(pdf_image)
-  end
-
-  def add_destination(name, pdf_destination)
-    @root.named_destination.add_destination(name, pdf_destination)
-  end
-
-  def add_outline_item(pdf_outline_item)
-    @root.outline.add_outline_item(pdf_outline_item)
-  end
+  def_delegators :@outline, :add_outline_item
 
 end
 
