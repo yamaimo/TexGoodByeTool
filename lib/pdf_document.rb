@@ -95,8 +95,6 @@ class PdfDocument
     end
 
     def add_destination(name, pdf_destination)
-      # nameはエンコードが必要な文字が含まれていないこと
-      # （あとで修正したい）
       @destinations[name] = pdf_destination
     end
 
@@ -283,10 +281,10 @@ if __FILE__ == $0
   document.add_image(PdfImageMock.new('image2'))
 
   document.add_destination("page1", PdfDestinationMock.new(page1))
-  document.add_destination("page2", PdfDestinationMock.new(page2))
+  document.add_destination("ページ2", PdfDestinationMock.new(page2))
 
   document.add_outline_item(PdfOutlineItemMock.new("outline1"))
-  document.add_outline_item(PdfOutlineItemMock.new("outline2"))
+  document.add_outline_item(PdfOutlineItemMock.new("アウトライン2"))
 
   binder = PdfObjectBinder.new
   document.root.attach_to(binder)

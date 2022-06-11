@@ -37,8 +37,20 @@ module PdfSerializeExtension
   refine Symbol do
 
     def serialize
-      # FIXME: マルチバイト対応
-      "/#{self}"
+      # エスケープが必要なバイト
+      bytes_to_be_escaped = "()<>[]{}/%#".bytes
+      bytes_to_be_escaped.concat (0x00..0x20).to_a
+      bytes_to_be_escaped.concat (0x7f..0xff).to_a
+
+      encoded = self.to_s.each_byte.map do |byte|
+        if bytes_to_be_escaped.include?(byte)
+          sprintf("#%02x", byte)
+        else
+          [byte].pack("c")
+        end
+      end.join
+
+      "/#{encoded}"
     end
 
   end
@@ -46,8 +58,9 @@ module PdfSerializeExtension
   refine String do
 
     def serialize
-      # FIXME: マルチバイト対応
-      "(#{self})"
+      bom = "feff"
+      utf16be_hexstr = self.encode("UTF-16BE").unpack("H*").first
+      "<#{bom}#{utf16be_hexstr}>"
     end
 
   end
@@ -90,7 +103,11 @@ if __FILE__ == $0
     d: 1,
     e: 2.0,
     f: :hoge,
+    f1: "()<>[]{}/%#".to_sym,
+    f2: " \r\n".to_sym,
+    f3: "あいうえお".to_sym,
     g: "hoge",
+    g1: "日本語",
     h: [],
     i: [1, 2, 3],
     j: [true, false, nil, 1, 2.0, :hoge, "hoge"],

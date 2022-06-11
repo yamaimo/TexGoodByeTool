@@ -9,8 +9,6 @@ class PdfOutlineItem
   end
 
   def initialize(title, destination_name)
-    # destination_nameはエンコードが必要な文字が含まれていないこと
-    # （あとで修正したい）
     @title = title
     @destination_name = destination_name
     @children = []
