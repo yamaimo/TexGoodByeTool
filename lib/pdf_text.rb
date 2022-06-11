@@ -1,10 +1,12 @@
 # PDFテキスト
 
 require_relative 'hex_extension'
+require_relative 'pdf_serialize_extension'
 
 class PdfText
 
   using HexExtension
+  using PdfSerializeExtension
 
   def initialize(operations)
     @operations = operations
@@ -20,7 +22,7 @@ class PdfText
   def set_font(pdf_font, size)
     # NOTE: 今はここでpdf_fontに必要とされる機能がsfnt_fontと等しいので、
     # sfnt_fontも指定可能（本来はpdf_fontのみが指定されるべき）
-    @operations.push "  /#{pdf_font.id} #{size} Tf"
+    @operations.push "  #{pdf_font.id.to_sym.serialize} #{size} Tf"
     @font = pdf_font
   end
 

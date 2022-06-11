@@ -254,17 +254,17 @@ end
 
 next_page = PdfPage.add_to(document)
 
-document.add_destination("page1", PdfDestination.new(page, 0.mm, 210.mm))
+document.add_destination("page 1", PdfDestination.new(page, 0.mm, 210.mm))
 document.add_destination("text", PdfDestination.new(page, 22.mm, 188.mm + 14.pt))
-document.add_destination("snowman", PdfDestination.new(page, 108.mm-25.pt, 40.mm+25.pt))
-document.add_destination("snowman_png", PdfDestination.new(page, 80.mm, 210.mm))
-document.add_destination("page2", PdfDestination.new(next_page, 0.mm, 210.mm))
+document.add_destination("image snowman", PdfDestination.new(page, 108.mm-25.pt, 40.mm+25.pt))
+document.add_destination("image snowman.png", PdfDestination.new(page, 80.mm, 210.mm))
+document.add_destination("page 2", PdfDestination.new(next_page, 0.mm, 210.mm))
 
-page1_outline = PdfOutlineItem.add_to(document, "Page 1", "page1")
-PdfOutlineItem.add_to(page1_outline, "text", "text")
-PdfOutlineItem.add_to(page1_outline, "snowman", "snowman")
-PdfOutlineItem.add_to(page1_outline, "snowman.png", "snowman_png")
-PdfOutlineItem.add_to(document, "Page 2", "page2")
+page1_outline = PdfOutlineItem.add_to(document, "ページ1", "page 1")
+PdfOutlineItem.add_to(page1_outline, "テキスト", "text")
+PdfOutlineItem.add_to(page1_outline, "雪だるま", "image snowman")
+PdfOutlineItem.add_to(page1_outline, "snowman.png", "image snowman.png")
+PdfOutlineItem.add_to(document, "ページ2", "page 2")
 
-writer = PdfWriter.new("test.pdf")
+writer = PdfWriter.new("output_test.pdf")
 writer.write(document)

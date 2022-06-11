@@ -35,14 +35,7 @@ class PdfPage
       stream = @operations.join("\n")
       length = stream.bytesize + "\n".bytesize
 
-      binder.attach(self, <<~END_OF_CONTENT)
-        <<
-          /Length #{length}
-        >>
-        stream
-        #{stream}
-        endstream
-      END_OF_CONTENT
+      binder.attach(self, {Length: length}, stream)
     end
 
   end
@@ -69,13 +62,12 @@ class PdfPage
   def attach_to(binder)
     @content.attach_to(binder)
 
-    binder.attach(self, <<~END_OF_PAGE)
-      <<
-        /Type /Page
-        /Parent #{binder.get_ref(@parent)}
-        /Contents [#{binder.get_ref(@content)}]
-      >>
-    END_OF_PAGE
+    page_dict = {
+      Type: :Page,
+      Parent: binder.get_ref(@parent),
+      Contents: [binder.get_ref(@content)],
+    }
+    binder.attach(self, page_dict)
   end
 
 end
@@ -124,11 +116,7 @@ if __FILE__ == $0
     def attach_to(binder)
       @pages.each{|page| page.attach_to(binder)}
 
-      binder.attach(self, <<~END_OF_DOCUMENT)
-        <<
-          /Type /Document
-        >>
-      END_OF_DOCUMENT
+      binder.attach(self, {Type: :Document})
     end
 
   end

@@ -1,24 +1,55 @@
 # PDFオブジェクトバインダー
 # 各PDFオブジェクトはattach_to(binder)を実装し、binderにオブジェクトを結びつける
 
+require_relative 'pdf_serialize_extension'
+
 class PdfObjectBinder
+
+  using PdfSerializeExtension
+
+  class ObjectRef
+
+    def initialize(id)
+      @id = id
+    end
+
+    def serialize
+      "#{@id} 0 R"
+    end
+
+  end
 
   def initialize
     @id = {}
     @serialized_object = {}
   end
 
-  def attach(object, serialized_data)
+  def get_ref(object)
+    if object
+      id = get_id(object)
+      ObjectRef.new(id)
+    else
+      nil
+    end
+  end
+
+  def attach(object, data, stream_data=nil)
+    serialized_data = data.serialize
+    if stream_data
+      serialized_data = <<~END_OF_SERIALIZED_DATA
+        #{serialized_data.chomp}
+        stream
+        #{stream_data}
+        endstream
+      END_OF_SERIALIZED_DATA
+    end
+
     id = get_id(object)
     @serialized_object[id] ||= <<~END_OF_SERIALIZED_OBJECT
       #{id} 0 obj
       #{serialized_data.chomp}
       endobj
     END_OF_SERIALIZED_OBJECT
-  end
-
-  def get_ref(object)
-    "#{get_id(object)} 0 R"
   end
 
   def serialized_objects
@@ -39,25 +70,26 @@ if __FILE__ == $0
     def initialize
       @parent = nil
       @children = []
+      @content = nil
     end
 
-    def set_parent(parent)
-      @parent = parent
-    end
+    attr_writer :parent, :content
 
     def add_child(child)
       @children.push child
-      child.set_parent(self)
+      child.parent = self
     end
 
     def attach_to(binder)
       @children.each {|child| child.attach_to(binder) }
-      binder.attach(self, <<~END_OF_SERIALIZED_DATA)
-        <<
-          /Parent #{@parent.nil? ? "null" : binder.get_ref(@parent)}
-          /Children [#{@children.empty? ? "null" : @children.map{|child| binder.get_ref(child)}.join(' ')}]
-        >>
-      END_OF_SERIALIZED_DATA
+
+      parent_ref = binder.get_ref(@parent)
+      children_ref = @children.map{|child| binder.get_ref(child)}
+      dict = {
+        Parent: parent_ref,
+        Children: children_ref,
+      }
+      binder.attach(self, dict, @content)
     end
 
   end
@@ -69,6 +101,10 @@ if __FILE__ == $0
   root.add_child(node2)
   node1_1 = TreeNode.new
   node1.add_child(node1_1)
+  node1_1.content = <<~END_OF_CONTENT.chomp
+    hoge
+    huga
+  END_OF_CONTENT
 
   binder = PdfObjectBinder.new
   root.attach_to(binder)

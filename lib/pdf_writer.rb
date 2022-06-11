@@ -1,5 +1,6 @@
 # PDF出力
 
+require_relative 'pdf_serialize_extension'
 require_relative 'pdf_object_binder'
 
 class PdfWriter
@@ -50,6 +51,8 @@ class PdfWriter
   # トレーラ
   class Trailer
 
+    using PdfSerializeExtension
+
     def initialize(root_ref, cross_ref_size, cross_ref_offset)
       @root_ref = root_ref
       @cross_ref_size = cross_ref_size
@@ -57,12 +60,13 @@ class PdfWriter
     end
 
     def to_s
+      trailer_dict = {
+        Root: @root_ref,
+        Size: @cross_ref_size,
+      }
       <<~END_OF_TRAILER
         trailer
-        <<
-          /Root #{@root_ref}
-          /Size #{@cross_ref_size}
-        >>
+        #{trailer_dict.serialize}
         startxref
         #{@cross_ref_offset}
         %%EOF
@@ -102,16 +106,10 @@ class PdfWriter
 end
 
 if __FILE__ == $0
-  if ARGV.empty?
-    raise "No output file is specified."
-  end
-
-  filename = ARGV[0]
-
   class PdfDocumentMock
     class Node
       def attach_to(binder)
-        binder.attach(self, "<< >>")
+        binder.attach(self, {})
       end
     end
 
@@ -119,7 +117,7 @@ if __FILE__ == $0
       def attach_to(binder)
         node = Node.new
         node.attach_to(binder)
-        binder.attach(self, "<< /Child #{binder.get_ref(node)} >>")
+        binder.attach(self, {Child: binder.get_ref(node)})
       end
     end
 
@@ -132,6 +130,6 @@ if __FILE__ == $0
 
   document = PdfDocumentMock.new
 
-  writer = PdfWriter.new(filename)
+  writer = PdfWriter.new("writer_test.pdf")
   writer.write(document)
 end
