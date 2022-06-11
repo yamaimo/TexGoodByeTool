@@ -19,14 +19,13 @@ class PdfDocument
       @named_destination.attach_to(binder)
       @outline.attach_to(binder)
 
-      binder.attach(self, <<~END_OF_DOC_CATALOG)
-        <<
-          /Type /Catalog
-          /Pages #{binder.get_ref(@page_tree)}
-          /Dests #{binder.get_ref(@named_destination)}
-          /Outlines #{binder.get_ref(@outline)}
-        >>
-      END_OF_DOC_CATALOG
+      doc_catalog_dict = {
+        Type: :Catalog,
+        Pages: binder.get_ref(@page_tree),
+        Dests: binder.get_ref(@named_destination),
+        Outlines: binder.get_ref(@outline),
+      }
+      binder.attach(self, doc_catalog_dict)
     end
 
   end
@@ -49,15 +48,14 @@ class PdfDocument
       @resource.attach_to(binder)
       @pages.each {|page| page.attach_to(binder)}
 
-      binder.attach(self, <<~END_OF_PAGE_TREE)
-        <<
-          /Type /Pages
-          /Count #{@pages.size}
-          /Kids [#{@pages.map{|page| binder.get_ref(page)}.join(' ')}]
-          /Resources #{binder.get_ref(@resource)}
-          /MediaBox [0 0 #{@page_width} #{@page_height}]
-        >>
-      END_OF_PAGE_TREE
+      page_tree_dict = {
+        Type: :Pages,
+        Count: @pages.size,
+        Kids: @pages.map{|page| binder.get_ref(page)},
+        Resources: binder.get_ref(@resource),
+        MediaBox: [0, 0, @page_width, @page_height],
+      }
+      binder.attach(self, page_tree_dict)
     end
 
   end
@@ -70,26 +68,22 @@ class PdfDocument
     end
 
     def add_font(pdf_font)
-      @fonts[pdf_font.id] = pdf_font
+      @fonts[pdf_font.id.to_sym] = pdf_font
     end
 
     def add_image(pdf_image)
-      @images[pdf_image.id] = pdf_image
+      @images[pdf_image.id.to_sym] = pdf_image
     end
 
     def attach_to(binder)
       @fonts.each {|id, font| font.attach_to(binder)}
-      font_entries = @fonts.map{|id, font| "/#{id} #{binder.get_ref(font)}"}.join(' ')
-
       @images.each {|id, image| image.attach_to(binder)}
-      image_entries = @images.map{|id, image| "/#{id} #{binder.get_ref(image)}"}.join(' ')
 
-      binder.attach(self, <<~END_OF_RESOURCE)
-        <<
-          /Font << #{font_entries} >>
-          /XObject << #{image_entries} >>
-        >>
-      END_OF_RESOURCE
+      resource_dict = {
+        Font: @fonts.transform_values{|font| binder.get_ref(font)},
+        XObject: @images.transform_values{|image| binder.get_ref(image)},
+      }
+      binder.attach(self, resource_dict)
     end
 
   end
@@ -107,15 +101,10 @@ class PdfDocument
     end
 
     def attach_to(binder)
-      name_dest_lines = @destinations.map do |name, dest|
-        "  /#{name} #{dest.to_serialized_data(binder)}"
-      end.join("\n")
-
-      binder.attach(self, <<~END_OF_NAMED_DESTINATION)
-        <<
-        #{name_dest_lines}
-        >>
-      END_OF_NAMED_DESTINATION
+      name_dest_dict = @destinations.transform_values do |dest|
+        dest.to_a(binder)
+      end
+      binder.attach(self, name_dest_dict)
     end
 
   end
@@ -140,23 +129,18 @@ class PdfDocument
     end
 
     def attach_to(binder)
-      if @outline_items.empty?
-        binder.attach(self, "<< >>")
-      else
-        @outline_items.each do |outline_item|
-          outline_item.attach_to(binder)
-        end
+      @outline_items.each do |outline_item|
+        outline_item.attach_to(binder)
+      end
 
+      outline_dict = {}
+      unless @outline_items.empty?
         first_item = @outline_items[0]
         last_item = @outline_items[-1]
-
-        binder.attach(self, <<~END_OF_OUTLINE)
-          <<
-            /First #{binder.get_ref(first_item)}
-            /Last #{binder.get_ref(last_item)}
-          >>
-        END_OF_OUTLINE
+        outline_dict[:First] = binder.get_ref(first_item)
+        outline_dict[:Last] = binder.get_ref(last_item)
       end
+      binder.attach(self, outline_dict)
     end
 
   end
@@ -194,12 +178,11 @@ if __FILE__ == $0
     attr_writer :parent
 
     def attach_to(binder)
-      binder.attach(self, <<~END_OF_PAGE)
-        <<
-          /Type /Page
-          /Parent #{binder.get_ref(@parent)}
-        >>
-      END_OF_PAGE
+      page_dict = {
+        Type: :Page,
+        Parent: binder.get_ref(@parent),
+      }
+      binder.attach(self, page_dict)
     end
 
   end
@@ -215,12 +198,11 @@ if __FILE__ == $0
     end
 
     def attach_to(binder)
-      binder.attach(self, <<~END_OF_FONT)
-        <<
-          /Type /Font
-          /BaseFont /#{@name}
-        >>
-      END_OF_FONT
+      font_dict = {
+        Type: :Font,
+        BaseFont: @name.to_sym,
+      }
+      binder.attach(self, font_dict)
     end
 
   end
@@ -236,13 +218,12 @@ if __FILE__ == $0
     end
 
     def attach_to(binder)
-      binder.attach(self, <<~END_OF_IMAGE)
-        <<
-          /Type /XObject
-          /Subtype /Image
-          /Name /#{@name}
-        >>
-      END_OF_IMAGE
+      image_dict = {
+        Type: :XObject,
+        Subtype: :Image,
+        Name: @name.to_sym,
+      }
+      binder.attach(self, image_dict)
     end
 
   end
@@ -253,8 +234,8 @@ if __FILE__ == $0
       @page = page
     end
 
-    def to_serialized_data(binder)
-      "[#{binder.get_ref(@page)} /XYZ null null null]"
+    def to_a(binder)
+      [binder.get_ref(@page), :XYZ, nil, nil, nil]
     end
 
   end
@@ -271,17 +252,13 @@ if __FILE__ == $0
     attr_writer :parent, :prev, :next
 
     def attach_to(binder)
-      # FIXME: PDF用の基本型を作った方がよさそう
-      bros_info = ""
-      bros_info += "  /Prev #{binder.get_ref(@prev)}\n" if @prev
-      bros_info += "  /Next #{binder.get_ref(@next)}\n" if @next
-
-      binder.attach(self, <<~END_OF_OUTLINE_ITEM)
-        <<
-          /Title (#{@title})
-          /Parent #{binder.get_ref(@parent)}
-        #{bros_info}>>
-      END_OF_OUTLINE_ITEM
+      outline_item_dict = {
+        Title: @title,
+        Parent: binder.get_ref(@parent),
+      }
+      outline_item_dict[:Prev] = binder.get_ref(@prev) if @prev
+      outline_item_dict[:Next] = binder.get_ref(@next) if @next
+      binder.attach(self, outline_item_dict)
     end
 
   end

@@ -266,5 +266,5 @@ PdfOutlineItem.add_to(page1_outline, "snowman", "snowman")
 PdfOutlineItem.add_to(page1_outline, "snowman.png", "snowman_png")
 PdfOutlineItem.add_to(document, "Page 2", "page2")
 
-writer = PdfWriter.new("test.pdf")
+writer = PdfWriter.new("output_test.pdf")
 writer.write(document)

@@ -23,30 +23,27 @@ class PdfFont
 
       subtype = case @sfnt_font.type
                 when SfntFontType::OPEN_TYPE
-                  "CIDFontType0"
+                  :CIDFontType0
                 when SfntFontType::TRUE_TYPE
-                  "CIDFontType2"
+                  :CIDFontType2
                 else
                   raise "Unknown type."
                 end
 
-      binder.attach(self, <<~END_OF_CID_FONT)
-        <<
-          /Type /Font
-          /Subtype /#{subtype}
-          /BaseFont /#{@sfnt_font.name}
-          /CIDSystemInfo <<
-            /Registry (Adobe)
-            /Ordering (Identity)
-            /Supplement 0
-          >>
-          /FontDescriptor #{binder.get_ref(@font_descriptor)}
-          /DW #{@sfnt_font.mode_width}
-          /W [
-            #{get_w_records.join("\n    ")}
-          ]
-        >>
-      END_OF_CID_FONT
+      cid_font_dict = {
+        Type: :Font,
+        Subtype: subtype,
+        BaseFont: @sfnt_font.name.to_sym,
+        CIDSystemInfo: {
+          Registry: "Adobe",
+          Ordering: "Identity",
+          Supplement: 0,
+        },
+        FontDescriptor: binder.get_ref(@font_descriptor),
+        DW: @sfnt_font.mode_width,
+        W: get_w_records,
+      }
+      binder.attach(self, cid_font_dict)
     end
 
     private
@@ -55,23 +52,25 @@ class PdfFont
       w_records = []
 
       mode_width = @sfnt_font.mode_width
-      record = nil
+
+      start_gid = nil
+      widths = []
       @sfnt_font.widths.each_with_index do |width, gid|
         if width != mode_width
-          if record.nil?
-            record = [gid, width]
-          else
-            record.push width
-          end
+          start_gid = gid if start_gid.nil?
+          widths.push width
         else
-          if record
-            w_records.push "#{record[0]} [#{record[1..-1].join(' ')}]"
-            record = nil
+          if start_gid
+            w_records.push start_gid
+            w_records.push widths
+            start_gid = nil
+            widths = []
           end
         end
       end
-      if record
-        w_records.push "#{record[0]} [#{record[1..-1].join(' ')}]"
+      if start_gid
+        w_records.push start_gid
+        w_records.push widths
       end
 
       w_records
@@ -89,15 +88,6 @@ class PdfFont
     def attach_to(binder)
       @font_file.attach_to(binder)
 
-      font_file_type = case @sfnt_font.type
-                       when SfntFontType::OPEN_TYPE
-                         "FontFile3"
-                       when SfntFontType::TRUE_TYPE
-                         "FontFile2"
-                       else
-                         raise "Unknown type."
-                       end
-
       flags = 0x04  # symbolic, latin以外も含んでいい
       flags |= 0x01 if @sfnt_font.fixed_pitch?
       flags |= 0x02 if @sfnt_font.serif?
@@ -111,20 +101,28 @@ class PdfFont
       # StemVは適切な値をとるのが難しいので太さを適当な大きさにしておく
       stem_v = @sfnt_font.weight / 5
 
-      binder.attach(self, <<~END_OF_FONT_DESCRIPTOR)
-        <<
-          /Type /FontDescriptor
-          /FontName /#{@sfnt_font.name}
-          /FontBBox [#{@sfnt_font.bound_box.join(' ')}]
-          /ItalicAngle #{@sfnt_font.italic_angle}
-          /Ascent #{@sfnt_font.ascender}
-          /Descent #{@sfnt_font.descender}
-          /Flags #{flags}
-          /CapHeight #{cap_height}
-          /StemV #{stem_v}
-          /#{font_file_type} #{binder.get_ref(@font_file)}
-        >>
-      END_OF_FONT_DESCRIPTOR
+      font_desc_dict = {
+        Type: :FontDescriptor,
+        FontName: @sfnt_font.name.to_sym,
+        FontBBox: @sfnt_font.bound_box,
+        ItalicAngle: @sfnt_font.italic_angle,
+        Ascent: @sfnt_font.ascender,
+        Descent: @sfnt_font.descender,
+        Flags: flags,
+        CapHeight: cap_height,
+        StemV: stem_v,
+      }
+
+      case @sfnt_font.type
+      when SfntFontType::OPEN_TYPE
+        font_desc_dict[:FontFile3] = binder.get_ref(@font_file)
+      when SfntFontType::TRUE_TYPE
+        font_desc_dict[:FontFile2] = binder.get_ref(@font_file)
+      else
+        raise "Unknown type."
+      end
+
+      binder.attach(self, font_desc_dict)
     end
 
   end
@@ -142,25 +140,21 @@ class PdfFont
       compressed = Zlib::Deflate.deflate(stream)
       compressed_length = compressed.bytesize
 
-      additional_entry = case @sfnt_font.type
-                         when SfntFontType::OPEN_TYPE
-                           "/Subtype /CIDFontType0C"
-                         when SfntFontType::TRUE_TYPE
-                           "/Length1 #{length}"
-                         else
-                           raise "Unknown type."
-                         end
+      stream_dict = {
+        Filter: :FlateDecode,
+        Length: compressed_length,
+      }
 
-      binder.attach(self, <<~END_OF_FONT_FILE)
-        <<
-          /Filter /FlateDecode
-          /Length #{compressed_length}
-          #{additional_entry}
-        >>
-        stream
-        #{compressed}
-        endstream
-      END_OF_FONT_FILE
+      case @sfnt_font.type
+      when SfntFontType::OPEN_TYPE
+        stream_dict[:Subtype] = :CIDFontType0C
+      when SfntFontType::TRUE_TYPE
+        stream_dict[:Length1] = length
+      else
+        raise "Unknown type."
+      end
+
+      binder.attach(self, stream_dict, compressed)
     end
 
   end
@@ -206,16 +200,8 @@ class PdfFont
       END_OF_TO_UNICODE_CMAP
       length = to_unicode_cmap.bytesize + "\n".bytesize
 
-      binder.attach(self, <<~END_OF_TO_UNICODE)
-        <<
-          /Length #{length}
-        >>
-        stream
-        #{to_unicode_cmap}
-        endstream
-      END_OF_TO_UNICODE
+      binder.attach(self, {Length: length}, to_unicode_cmap)
     end
-
 
   end
 
@@ -239,16 +225,15 @@ class PdfFont
       name = "#{name}-#{encoding}"
     end
 
-    binder.attach(self, <<~END_OF_FONT)
-      <<
-        /Type /Font
-        /Subtype /Type0
-        /BaseFont /#{name}
-        /Encoding /#{encoding}
-        /DescendantFonts [#{binder.get_ref(@cid_font)}]
-        /ToUnicode #{binder.get_ref(@to_unicode)}
-      >>
-    END_OF_FONT
+    font_dict = {
+      Type: :Font,
+      Subtype: :Type0,
+      BaseFont: name.to_sym,
+      Encoding: encoding.to_sym,
+      DescendantFonts: [binder.get_ref(@cid_font)],
+      ToUnicode: binder.get_ref(@to_unicode),
+    }
+    binder.attach(self, font_dict)
   end
 
   def_delegators :@sfnt_font, :id, :convert_to_gid, :find_gid

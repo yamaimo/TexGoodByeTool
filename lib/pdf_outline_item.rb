@@ -42,27 +42,24 @@ class PdfOutlineItem
       child.attach_to(binder)
     end
 
-    # FIXME: PDF用の基本型を作った方がよさそう
-    children_info = ""
+    outline_item_dict = {
+      Title: @title,
+      Dest: @destination_name.to_sym,
+      Parent: binder.get_ref(@parent),
+    }
+
+    outline_item_dict[:Prev] = binder.get_ref(@prev) if @prev
+    outline_item_dict[:Next] = binder.get_ref(@next) if @next
+
     unless @children.empty?
       first_item = @children[0]
       last_item = @children[-1]
-      children_info += "  /First #{binder.get_ref(first_item)}\n"
-      children_info += "  /Last #{binder.get_ref(last_item)}\n"
-      children_info += "  /Count 0\n"
+      outline_item_dict[:First] = binder.get_ref(first_item)
+      outline_item_dict[:Last] = binder.get_ref(last_item)
+      outline_item_dict[:Count] = 0
     end
 
-    bros_info = ""
-    bros_info += "  /Prev #{binder.get_ref(@prev)}\n" if @prev
-    bros_info += "  /Next #{binder.get_ref(@next)}\n" if @next
-
-    binder.attach(self, <<~END_OF_OUTLINE_ITEM)
-      <<
-        /Title (#{@title})
-        /Dest /#{@destination_name}
-        /Parent #{binder.get_ref(@parent)}
-      #{children_info}#{bros_info}>>
-    END_OF_OUTLINE_ITEM
+    binder.attach(self, outline_item_dict)
   end
 
 end

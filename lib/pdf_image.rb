@@ -4,6 +4,8 @@ require 'chunky_png'
 require 'stringio'
 require 'zlib'
 
+require_relative 'pdf_serialize_extension'
+
 class PdfImage
 
   class Png
@@ -49,38 +51,30 @@ class PdfImage
       rgb_compressed = Zlib::Deflate.deflate(rgb_stream)
 
       image_mask = Object.new
-      binder.attach(image_mask, <<~END_OF_MASK)
-        <<
-          /Type /XObject
-          /Subtype /Image
-          /Width #{@width}
-          /Height #{@height}
-          /ImageMask true
-          /BitsPerComponent 1
-          /Filter /FlateDecode
-          /Length #{mask_compressed.bytesize}
-        >>
-        stream
-        #{mask_compressed}
-        endstream
-      END_OF_MASK
+      mask_dict = {
+        Type: :XObject,
+        Subtype: :Image,
+        Width: @width,
+        Height: @height,
+        ImageMask: true,
+        BitsPerComponent: 1,
+        Filter: :FlateDecode,
+        Length: mask_compressed.bytesize,
+      }
+      binder.attach(image_mask, mask_dict, mask_compressed)
 
-      binder.attach(self, <<~END_OF_PNG)
-        <<
-          /Type /XObject
-          /Subtype /Image
-          /Width #{@width}
-          /Height #{@height}
-          /ColorSpace /DeviceRGB
-          /BitsPerComponent 8
-          /Mask #{binder.get_ref(image_mask)}
-          /Filter /FlateDecode
-          /Length #{rgb_compressed.bytesize}
-        >>
-        stream
-        #{rgb_compressed}
-        endstream
-      END_OF_PNG
+      image_dict = {
+        Type: :XObject,
+        Subtype: :Image,
+        Width: @width,
+        Height: @height,
+        ColorSpace: :DeviceRGB,
+        BitsPerComponent: 8,
+        Mask: binder.get_ref(image_mask),
+        Filter: :FlateDecode,
+        Length: rgb_compressed.bytesize,
+      }
+      binder.attach(self, image_dict, rgb_compressed)
     end
 
     private
@@ -122,6 +116,8 @@ class PdfImage
 
   class Pen
 
+    using PdfSerializeExtension
+
     def initialize(content, anchor: DEFAULT_ANCHOR, dpi: nil)
       @content = content
       @anchor = anchor
@@ -153,7 +149,7 @@ class PdfImage
         y += y_offset
 
         @content.operations.push "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
-        @content.operations.push "/#{image.id} Do"
+        @content.operations.push "#{image.id.to_sym.serialize} Do"
       end
     end
 

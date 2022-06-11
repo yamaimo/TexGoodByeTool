@@ -39,7 +39,7 @@ class PdfObjectBinder
       serialized_data = <<~END_OF_SERIALIZED_DATA
         #{serialized_data.chomp}
         stream
-        #{stream_data.chomp}
+        #{stream_data}
         endstream
       END_OF_SERIALIZED_DATA
     end
@@ -101,7 +101,7 @@ if __FILE__ == $0
   root.add_child(node2)
   node1_1 = TreeNode.new
   node1.add_child(node1_1)
-  node1_1.content = <<~END_OF_CONTENT
+  node1_1.content = <<~END_OF_CONTENT.chomp
     hoge
     huga
   END_OF_CONTENT
