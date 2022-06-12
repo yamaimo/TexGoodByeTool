@@ -1,5 +1,7 @@
 # PDF出力
 
+require 'digest'
+
 require_relative 'pdf_serialize_extension'
 require_relative 'pdf_object_binder'
 
@@ -53,18 +55,23 @@ class PdfWriter
 
     using PdfSerializeExtension
 
-    def initialize(root_ref, info_ref, cross_ref_size, cross_ref_offset)
+    def initialize(root_ref, info_ref, serialized_info, cross_ref_size, cross_ref_offset)
       @root_ref = root_ref
       @info_ref = info_ref
+      @serialized_info = serialized_info
       @cross_ref_size = cross_ref_size
       @cross_ref_offset = cross_ref_offset
     end
 
     def to_s
+      id = Digest::MD5.new
+      id << @serialized_info
+
       trailer_dict = {
         Root: @root_ref,
         Info: @info_ref,
         Size: @cross_ref_size,
+        ID: [id, id],
       }
       <<~END_OF_TRAILER
         trailer
@@ -101,8 +108,9 @@ class PdfWriter
 
       root_ref = binder.get_ref(document.root)
       info_ref = binder.get_ref(document.info)
+      serialized_info = binder.serialized_objects[-1] # infoのデータは最後
       cross_ref_size = cross_ref_table.size
-      trailer = Trailer.new(root_ref, info_ref, cross_ref_size, cross_ref_offset)
+      trailer = Trailer.new(root_ref, info_ref, serialized_info, cross_ref_size, cross_ref_offset)
       file.puts trailer
     end
   end

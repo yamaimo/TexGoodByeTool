@@ -1,5 +1,7 @@
 # Rubyの型で表現したPDFオブジェクトのシリアライズ
 
+require 'digest'
+
 module PdfSerializeExtension
 
   refine TrueClass do
@@ -102,6 +104,14 @@ module PdfSerializeExtension
 
   end
 
+  refine Digest::Base do
+
+    def serialize
+      "<#{self.hexdigest}>"
+    end
+
+  end
+
 end
 
 if __FILE__ == $0
@@ -128,6 +138,8 @@ if __FILE__ == $0
     n: Time.now,
     n1: Time.now.getutc,
     n2: Time.now.getlocal("-03:00"),
+    o: (Digest::MD5.new << "hoge"),
+    o1: (Digest::SHA1.new << "huga"),
   }
 
   puts data.serialize
