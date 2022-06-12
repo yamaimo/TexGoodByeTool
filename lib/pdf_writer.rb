@@ -53,8 +53,9 @@ class PdfWriter
 
     using PdfSerializeExtension
 
-    def initialize(root_ref, cross_ref_size, cross_ref_offset)
+    def initialize(root_ref, info_ref, cross_ref_size, cross_ref_offset)
       @root_ref = root_ref
+      @info_ref = info_ref
       @cross_ref_size = cross_ref_size
       @cross_ref_offset = cross_ref_offset
     end
@@ -62,6 +63,7 @@ class PdfWriter
     def to_s
       trailer_dict = {
         Root: @root_ref,
+        Info: @info_ref,
         Size: @cross_ref_size,
       }
       <<~END_OF_TRAILER
@@ -86,6 +88,7 @@ class PdfWriter
 
       binder = PdfObjectBinder.new
       document.root.attach_to(binder)
+      document.info.attach_to(binder)
 
       cross_ref_table = CrossRefTable.new
       binder.serialized_objects.each do |serialized_object|
@@ -97,8 +100,9 @@ class PdfWriter
       file.puts cross_ref_table
 
       root_ref = binder.get_ref(document.root)
+      info_ref = binder.get_ref(document.info)
       cross_ref_size = cross_ref_table.size
-      trailer = Trailer.new(root_ref, cross_ref_size, cross_ref_offset)
+      trailer = Trailer.new(root_ref, info_ref, cross_ref_size, cross_ref_offset)
       file.puts trailer
     end
   end
@@ -123,9 +127,10 @@ if __FILE__ == $0
 
     def initialize
       @root = Root.new
+      @info = Node.new
     end
 
-    attr_reader :root
+    attr_reader :root, :info
   end
 
   document = PdfDocumentMock.new
