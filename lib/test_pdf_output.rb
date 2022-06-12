@@ -44,6 +44,12 @@ page_width = 148.mm
 page_height = 210.mm
 document = PdfDocument.new(page_width, page_height)
 
+document.title = "出力テスト"
+document.subject = "TeXグッバイしたい"
+document.keywords = "TeX,組版"
+document.author = "やまいも"
+document.app = "vim"
+
 document.add_font(pdf_font)
 document.add_image(snowman_png)
 

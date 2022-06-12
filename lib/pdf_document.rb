@@ -143,15 +143,51 @@ class PdfDocument
 
   end
 
+  class DocInfo
+
+    def initialize
+      @title = nil
+      @subject = nil
+      @keywords = nil
+      @author = nil
+      @create_time = nil
+      @modify_time = nil
+      @app = nil
+    end
+
+    attr_writer :title, :subject, :keywords, :author
+    attr_writer :create_time, :modify_time, :app
+
+    def attach_to(binder)
+      create_time = @create_time || Time.now
+      modify_time = @modify_time || Time.now
+
+      doc_info_dict = {
+        Producer: "TexGoodByeTool",
+        CreationDate: create_time,
+        ModDate: modify_time,
+      }
+      doc_info_dict[:Title] = @title if @title
+      doc_info_dict[:Subject] = @subject if @subject
+      doc_info_dict[:Keywords] = @keywords if @keywords
+      doc_info_dict[:Author] = @author if @author
+      doc_info_dict[:Creator] = @app if @app
+
+      binder.attach(self, doc_info_dict)
+    end
+
+  end
+
   def initialize(page_width, page_height)
     @resource = Resource.new
     @page_tree = PageTree.new(page_width, page_height, @resource)
     @named_destination = NamedDestination.new
     @outline = Outline.new
     @root = DocCatalog.new(@page_tree, @named_destination, @outline)
+    @info = DocInfo.new
   end
 
-  attr_reader :root
+  attr_reader :root, :info
 
   def_delegators :@page_tree, :add_page
 
@@ -160,6 +196,9 @@ class PdfDocument
   def_delegators :@named_destination, :add_destination
 
   def_delegators :@outline, :add_outline_item
+
+  def_delegators :@info, :title=, :subject=, :keywords=, :author=
+  def_delegators :@info, :create_time=, :modify_time=, :app=
 
 end
 
@@ -267,6 +306,9 @@ if __FILE__ == $0
   page_height = 210.mm
 
   document = PdfDocument.new(page_width, page_height)
+  document.title = "テスト"
+  document.author = "やまいも"
+  document.app = "vim"
 
   page1 = PdfPageMock.new
   page2 = PdfPageMock.new
@@ -288,6 +330,7 @@ if __FILE__ == $0
 
   binder = PdfObjectBinder.new
   document.root.attach_to(binder)
+  document.info.attach_to(binder)
 
   binder.serialized_objects.each do |serialized_object|
     puts serialized_object
