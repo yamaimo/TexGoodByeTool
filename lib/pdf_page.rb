@@ -40,6 +40,28 @@ class PdfPage
 
   end
 
+  class InternalLink
+
+    def initialize(destination_name, rect, alt=nil)
+      @destination_name = destination_name
+      @rect = rect
+      @alt = alt
+    end
+
+    def attach_to(binder)
+      link_dict = {
+        Subtype: :Link,
+        Rect: @rect,
+        Border: [0, 0, 0],
+        Dest: @destination_name.to_sym,
+      }
+      link_dict[:Contents] = @alt if @alt
+
+      binder.attach(self, link_dict)
+    end
+
+  end
+
   def self.add_to(document)
     page = PdfPage.new
     document.add_page(page)
@@ -48,6 +70,7 @@ class PdfPage
 
   def initialize
     @content = Content.new
+    @links = []
     @parent = nil
   end
 
@@ -59,13 +82,20 @@ class PdfPage
     block.call(@content)
   end
 
+  def add_link(dest, rect, alt=nil)
+    link = InternalLink.new(dest, rect, alt)
+    @links.push link
+  end
+
   def attach_to(binder)
     @content.attach_to(binder)
+    @links.each {|link| link.attach_to(binder)}
 
     page_dict = {
       Type: :Page,
       Parent: binder.get_ref(@parent),
       Contents: [binder.get_ref(@content)],
+      Annots: @links.map{|link| binder.get_ref(link)},
     }
     binder.attach(self, page_dict)
   end
@@ -96,9 +126,6 @@ if __FILE__ == $0
       @resource = {}
       def @resource.add_font(pdf_font)
         self[pdf_font.id] = pdf_font
-      end
-      def @resource.get_font(id)
-        self[id]
       end
     end
 
@@ -151,6 +178,9 @@ if __FILE__ == $0
       text.puts "グッバイしたい！"
     end
   end
+
+  page.add_link("id:ABC", [22.mm, 188.mm-14.pt, 22.mm+14.pt*3, 188.mm])
+  page.add_link("id:あいうえお", [22.mm, 188.mm-16.pt-14.pt, 22.mm+14.pt*5, 188.mm-16.pt], "あいうえお")
 
   binder = PdfObjectBinder.new
   document.attach_to(binder)

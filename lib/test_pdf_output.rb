@@ -272,5 +272,23 @@ PdfOutlineItem.add_to(page1_outline, "雪だるま", "image snowman")
 PdfOutlineItem.add_to(page1_outline, "snowman.png", "image snowman.png")
 PdfOutlineItem.add_to(document, "ページ2", "page 2")
 
+next_page.add_content do |content|
+  content.stack_graphic_state do
+    content.move_origin 22.mm, 188.mm
+    content.add_text do |text|
+      text.set_font pdf_font, 14
+      text.set_leading 16
+
+      dests = ["page 1", "text", "image snowman", "image snowman.png", "page 2"]
+      y_offset = 188.mm
+      dests.each_with_index do |dest, t|
+        text.puts "Link#{t}"
+        next_page.add_link(dest, [22.mm, y_offset, 22.mm + 40.pt, y_offset + 14.pt], dest)
+        y_offset -= 16.pt
+      end
+    end
+  end
+end
+
 writer = PdfWriter.new("output_test.pdf")
 writer.write(document)
