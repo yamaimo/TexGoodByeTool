@@ -1,5 +1,7 @@
 # テスト出力
 
+require 'uri'
+
 require_relative 'sfnt_font'
 require_relative 'sfnt_font_collection'
 require_relative 'pdf_font'
@@ -283,9 +285,28 @@ next_page.add_content do |content|
       y_offset = 188.mm
       dests.each_with_index do |dest, t|
         text.puts "Link#{t}"
-        next_page.add_link(dest, [22.mm, y_offset, 22.mm + 40.pt, y_offset + 14.pt], dest)
+        next_page.add_internal_link(
+          dest, [22.mm, y_offset, 22.mm + 40.pt, y_offset + 14.pt], dest)
         y_offset -= 16.pt
       end
+    end
+  end
+
+  content.stack_graphic_state do
+    content.move_origin 22.mm, 150.mm
+    content.add_text do |text|
+      text.set_font pdf_font, 14
+      text.set_leading 16
+
+      text.puts "Yahoo"
+      next_page.add_external_link(
+        URI.parse("https://www.yahoo.co.jp/"),
+        [22.mm, 150.mm, 22.mm + 40.pt, 150.mm + 14.pt])
+      text.puts "TeXグッバイ本"
+      next_page.add_external_link(
+        URI.parse("https://www.yamaimo.dev/entry/TexGoodBye1"),
+        [22.mm, 150.mm - 16.pt, 22.mm + 90.pt, 150.mm - 16.pt + 14.pt],
+        "TeXグッバイしたい")
     end
   end
 end
