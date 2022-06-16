@@ -1,6 +1,7 @@
 # Rubyの型で表現したPDFオブジェクトのシリアライズ
 
 require 'digest'
+require 'uri'
 
 module PdfSerializeExtension
 
@@ -112,6 +113,14 @@ module PdfSerializeExtension
 
   end
 
+  refine URI::Generic do
+
+    def serialize
+      "(#{self.to_s})"
+    end
+
+  end
+
 end
 
 if __FILE__ == $0
@@ -140,6 +149,10 @@ if __FILE__ == $0
     n2: Time.now.getlocal("-03:00"),
     o: (Digest::MD5.new << "hoge"),
     o1: (Digest::SHA1.new << "huga"),
+    p: URI.parse("http://www.hoge.huga"),
+    p1: URI.parse("https://www.hoge.huga/aaa/bbb/?x=1&y=2"),
+    p2: URI.parse("ftp://ftp.hoge.huga/aaa/bbb/"),
+    p3: URI.parse("mailto:hoge@huga.com?subject=hoge"),
   }
 
   puts data.serialize

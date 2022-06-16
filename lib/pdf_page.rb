@@ -62,6 +62,28 @@ class PdfPage
 
   end
 
+  class ExternalLink
+
+    def initialize(uri, rect, alt=nil)
+      @uri = uri
+      @rect = rect
+      @alt = alt
+    end
+
+    def attach_to(binder)
+      link_dict = {
+        Subtype: :Link,
+        Rect: @rect,
+        Border: [0, 0, 0],
+        A: {S: :URI, URI: @uri},
+      }
+      link_dict[:Contents] = @alt if @alt
+
+      binder.attach(self, link_dict)
+    end
+
+  end
+
   def self.add_to(document)
     page = PdfPage.new
     document.add_page(page)
@@ -82,8 +104,13 @@ class PdfPage
     block.call(@content)
   end
 
-  def add_link(dest, rect, alt=nil)
-    link = InternalLink.new(dest, rect, alt)
+  def add_internal_link(destination_name, rect, alt=nil)
+    link = InternalLink.new(destination_name, rect, alt)
+    @links.push link
+  end
+
+  def add_external_link(uri, rect, alt=nil)
+    link = ExternalLink.new(uri, rect, alt)
     @links.push link
   end
 
@@ -103,6 +130,8 @@ class PdfPage
 end
 
 if __FILE__ == $0
+  require 'uri'
+
   require_relative 'sfnt_font'
   require_relative 'pdf_font'
   require_relative 'length_extension'
@@ -179,8 +208,11 @@ if __FILE__ == $0
     end
   end
 
-  page.add_link("id:ABC", [22.mm, 188.mm-14.pt, 22.mm+14.pt*3, 188.mm])
-  page.add_link("id:あいうえお", [22.mm, 188.mm-16.pt-14.pt, 22.mm+14.pt*5, 188.mm-16.pt], "あいうえお")
+  page.add_internal_link("id:ABC", [22.mm, 188.mm-14.pt, 22.mm+14.pt*3, 188.mm])
+  page.add_internal_link("id:あいうえお", [22.mm, 188.mm-16.pt-14.pt, 22.mm+14.pt*5, 188.mm-16.pt], "あいうえお")
+
+  page.add_external_link(URI.parse("http://www.hoge.huga"), [1, 2, 3, 4])
+  page.add_external_link(URI.parse("https://www.hoge.huga/a/b/c"), [1, 2, 3, 4], "ほげ")
 
   binder = PdfObjectBinder.new
   document.attach_to(binder)
