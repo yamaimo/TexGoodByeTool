@@ -44,7 +44,8 @@ class TypesetBox
   def_delegators :@lines, :push, :pop, :unshift, :shift, :empty?
 
   def write_to(content)
-    text = PdfText.new(nil, 0)  # FIXME: 本来はフォントが定まっているべき
+    # FIXME: PdfTextを作るのはフォントが定まるもっと内側でやるべき
+    text = PdfText.new(nil, 0)
     text.write_in(content) do |pen|
       init_ascender = @lines.empty? ? 0 : @lines[0].ascender
       pen.return_cursor(dx: @padding.left, dy: - @padding.top - init_ascender)

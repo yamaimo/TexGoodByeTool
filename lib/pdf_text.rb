@@ -73,7 +73,7 @@ class PdfText
 
   attr_accessor :font, :size, :leading, :text_rise
 
-  def write_in(content, &block)  # write_inがよさそう
+  def write_in(content, &block)
     content.stack_graphic_state do
       pen = Pen.new(content, @font)
 

@@ -31,7 +31,7 @@ class TypesetLine
 
   def_delegators :@chars, :push, :pop, :unshift, :shift, :empty?
 
-  def write_with(pen)
+  def write_with(pen) # FIXME: write_to(content)であるべき
     @chars.each do |char|
       char.write_with(pen)
     end
