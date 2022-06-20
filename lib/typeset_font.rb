@@ -13,9 +13,9 @@ class TypesetFont
   attr_reader :sfnt_font, :size
 
   def get_font_set_operation
-    TypesetOperation.new do |text|
+    TypesetOperation.new do |pen|
       # FIXME: 本来はPdfFontが指定されるべき
-      text.set_font @sfnt_font, @size
+      pen.set_font @sfnt_font, @size
     end
   end
 
@@ -29,8 +29,8 @@ class TypesetFont
 
   def get_space(n_chars)
     width = @size * n_chars
-    TypesetOperation.new(width) do |text|
-      text.put_space n_chars
+    TypesetOperation.new(width) do |pen|
+      pen.put_space n_chars
     end
   end
 
@@ -45,7 +45,7 @@ end
 if __FILE__ == $0
   require_relative 'sfnt_font'
 
-  class TextMock
+  class PenMock
 
     def set_font(pdf_font, size)
       puts "[set_font] id: #{pdf_font.id}, size: #{size}"
@@ -78,8 +78,8 @@ if __FILE__ == $0
   puts "line width : #{line_width}"
   puts "line height: #{line_height}"
 
-  text = TextMock.new
+  pen = PenMock.new
   line.each do |item|
-    item.write_to(text)
+    item.write_with(pen)
   end
 end

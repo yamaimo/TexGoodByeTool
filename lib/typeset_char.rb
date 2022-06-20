@@ -16,8 +16,8 @@ class TypesetChar
     @ascender - @descender
   end
 
-  def write_to(text)
-    text.putc(gid: @gid)
+  def write_with(pen)
+    pen.putc(gid: @gid)
   end
 
   def to_s
@@ -32,6 +32,7 @@ if __FILE__ == $0
   require_relative 'pdf_document'
   require_relative 'pdf_font'
   require_relative 'pdf_page'
+  require_relative 'pdf_text'
   require_relative 'pdf_object_binder'
 
   using LengthExtension
@@ -64,9 +65,9 @@ if __FILE__ == $0
   page = PdfPage.add_to(document)
   page.add_content do |content|
     content.move_origin 22.mm, 188.mm
-    content.add_text do |text|
-      text.set_font pdf_font, font_size
-      typeset_char.write_to(text)
+    text = PdfText.new(pdf_font, font_size)
+    text.write_in(content) do |pen|
+      typeset_char.write_with(pen)
     end
   end
 

@@ -15,8 +15,8 @@ class TypesetOperation
     @ascender - @descender
   end
 
-  def write_to(obj)
-    @operation.call(obj)
+  def write_with(pen)
+    @operation.call(pen)
   end
 
 end
@@ -31,5 +31,5 @@ if __FILE__ == $0
   puts "ascender : #{operation.ascender}"
   puts "descender: #{operation.descender}"
 
-  operation.write_to("hoge")
+  operation.write_with("hoge")
 end

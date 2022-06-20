@@ -3,6 +3,7 @@
 require 'forwardable'
 
 require_relative 'typeset_line'
+require_relative 'pdf_text'
 
 class TypesetBox
 
@@ -43,9 +44,11 @@ class TypesetBox
   def_delegators :@lines, :push, :pop, :unshift, :shift, :empty?
 
   def write_to(content)
-    content.add_text do |text|
+    # FIXME: PdfTextを作るのはフォントが定まるもっと内側でやるべき
+    text = PdfText.new(nil, 0)
+    text.write_in(content) do |pen|
       init_ascender = @lines.empty? ? 0 : @lines[0].ascender
-      text.return_cursor(dx: @padding.left, dy: - @padding.top - init_ascender)
+      pen.return_cursor(dx: @padding.left, dy: - @padding.top - init_ascender)
 
       leadings = @lines.each_cons(2).map do |current_line, next_line|
         (- current_line.descender) + @line_gap + next_line.ascender
@@ -53,8 +56,8 @@ class TypesetBox
       leadings.push 0 # 番兵
 
       @lines.zip(leadings).each do |line, leading|
-        text.set_leading(leading)
-        line.write_to(text)
+        pen.set_leading(leading)
+        line.write_with(pen)
       end
     end
   end
@@ -66,40 +69,8 @@ if __FILE__ == $0
   require_relative 'typeset_font'
   require_relative 'typeset_margin'
   require_relative 'typeset_padding'
-
-  class ContentMock
-
-    class TextMock
-
-      def return_cursor(dx: 0, dy: 0)
-        STDOUT.puts "  [return_cursor] dx: #{dx}, dy: #{dy}"
-      end
-
-      def set_font(pdf_font, size)
-        STDOUT.puts "  [set_font] id: #{pdf_font.id}, size: #{size}"
-      end
-
-      def set_leading(size)
-        STDOUT.puts "  [set_leading] size: #{size}"
-      end
-
-      def puts(str="")
-        STDOUT.puts "  [puts]"
-      end
-
-      def putc(char: nil, gid: 0)
-        STDOUT.puts "  [putc] gid: #{gid}"
-      end
-
-    end
-
-    def add_text(&block)
-      puts "[add_text]"
-      text = TextMock.new
-      block.call(text)
-    end
-
-  end
+  require_relative 'pdf_page'
+  require_relative 'pdf_object_binder'
 
   sfnt_font = SfntFont.load('ipaexm.ttf')
   font_size = 14
@@ -154,7 +125,14 @@ if __FILE__ == $0
     "(top: #{box2.padding.top}, right: #{box2.padding.right}, "\
     "bottom: #{box2.padding.bottom}, left: #{box2.padding.left})"
 
-  content = ContentMock.new
+  content = PdfPage::Content.new
   box1.write_to(content)
   box2.write_to(content)
+
+  binder = PdfObjectBinder.new
+  content.attach_to(binder)
+
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
+  end
 end

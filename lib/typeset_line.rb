@@ -31,11 +31,11 @@ class TypesetLine
 
   def_delegators :@chars, :push, :pop, :unshift, :shift, :empty?
 
-  def write_to(text)
+  def write_with(pen) # FIXME: write_to(content)であるべき
     @chars.each do |char|
-      char.write_to(text)
+      char.write_with(pen)
     end
-    text.puts
+    pen.puts
   end
 
 end
@@ -44,7 +44,7 @@ if __FILE__ == $0
   require_relative 'sfnt_font'
   require_relative 'typeset_font'
 
-  class TextMock
+  class PenMock
 
     def set_font(pdf_font, size)
       STDOUT.puts "[set_font] id: #{pdf_font.id}, size: #{size}"
@@ -77,6 +77,6 @@ if __FILE__ == $0
   puts "line ascender  : #{line.ascender}"
   puts "line descender : #{line.descender}"
 
-  text = TextMock.new
-  line.write_to(text)
+  pen = PenMock.new
+  line.write_with(pen)
 end

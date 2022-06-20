@@ -148,8 +148,8 @@ class PdfImage
         x += x_offset
         y += y_offset
 
-        @content.operations.push "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
-        @content.operations.push "#{image.id.to_sym.serialize} Do"
+        @content.add_operation "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
+        @content.add_operation "#{image.id.to_sym.serialize} Do"
       end
     end
 
@@ -162,7 +162,7 @@ class PdfImage
 
   attr_accessor :anchor, :dpi
 
-  def draw_on(content, &block)
+  def write_in(content, &block)
     pen = Pen.new(content, anchor: @anchor, dpi: @dpi)
     block.call(pen)
   end
@@ -173,38 +173,23 @@ if __FILE__ == $0
   require_relative 'pdf_page'
   require_relative 'pdf_object_binder'
 
-  class ResourceMock
+  content = PdfPage::Content.new
 
-    def initialize
-      @images = {}
-    end
-
-    def add_image(pdf_image)
-      @images[pdf_image.id] = pdf_image
-    end
-
-  end
-
-  resource = ResourceMock.new
-  page_content = PdfPage::Content.new
-
-  pdf_image = PdfImage::Png.load('christmas_snowman.png')
-  puts "path: #{pdf_image.path}"
-  puts "id  : #{pdf_image.id}"
-  puts "width : #{pdf_image.width}"
-  puts "height: #{pdf_image.height}"
-  puts "dpi   : #{pdf_image.dpi}"
-
-  resource.add_image(pdf_image)
+  png = PdfImage::Png.load('christmas_snowman.png')
+  puts "path: #{png.path}"
+  puts "id  : #{png.id}"
+  puts "width : #{png.width}"
+  puts "height: #{png.height}"
+  puts "dpi   : #{png.dpi}"
 
   image = PdfImage.new
-  image.draw_on(page_content) do |pen|
-    pen.paint pdf_image
+  image.write_in(content) do |pen|
+    pen.paint png
   end
 
   binder = PdfObjectBinder.new
-  pdf_image.attach_to(binder)
-  page_content.attach_to(binder)
+  png.attach_to(binder)
+  content.attach_to(binder)
 
   binder.serialized_objects.each do |serialized_object|
     puts serialized_object
