@@ -10,6 +10,7 @@ require_relative 'pdf_document'
 require_relative 'pdf_page'
 require_relative 'pdf_graphic'
 require_relative 'pdf_image'
+require_relative 'pdf_text'
 require_relative 'pdf_destination'
 require_relative 'pdf_outline_item'
 require_relative 'pdf_writer'
@@ -55,30 +56,30 @@ document.app = "vim"
 document.add_font(pdf_font)
 document.add_image(snowman_png)
 
-def put_tex(text, fontsize)
+def put_tex(pen, fontsize)
   # base/plain.tex:\def\TeX{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
-  text.putc char: 'T'
-  text.put_space -0.1667
-  text.set_text_rise(-fontsize * 0.5 * 0.5)
-  text.putc char: 'E'
-  text.set_text_rise 0
-  text.put_space -0.125
-  text.putc char: 'X'
+  pen.putc char: 'T'
+  pen.put_space -0.1667
+  pen.set_text_rise(-fontsize * 0.5 * 0.5)
+  pen.putc char: 'E'
+  pen.set_text_rise 0
+  pen.put_space -0.125
+  pen.putc char: 'X'
 end
 
 page = PdfPage.add_to(document)
 page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 22.mm, 188.mm
-    content.add_text do |text|
-      text.set_font pdf_font, 14
-      text.set_leading 16
+    text = PdfText.new(pdf_font, 14)
+    text.leading = 16
+    text.write_in(content) do |pen|
       ["ABCDE", "あいうえお", "斉斎齊齋", "\u{20B9F}\u{20D45}\u{20E6D}"].each do |str|
-        text.puts str
+        pen.puts str
       end
-      text.puts
-      put_tex(text, 14)
-      text.puts "グッバイしたい！"
+      pen.puts
+      put_tex(pen, 14)
+      pen.puts "グッバイしたい！"
     end
   end
 
@@ -92,11 +93,11 @@ page.add_content do |content|
     end
 
     graphic = PdfGraphic.new
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       pen.stroke path
     end
 
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       copied = path.clone
       copied.scale ratio: 0.8, anchor: [1.cm, 0.cm]
       pen.stroke copied
@@ -105,7 +106,7 @@ page.add_content do |content|
     graphic.line_width = 5.pt
     graphic.line_cap = PdfGraphic::LineCapStyle::ROUND
     graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       copied = path.clone
       5.times do
         copied.move dx: 0.5.cm, dy: -1.5.cm
@@ -117,7 +118,7 @@ page.add_content do |content|
     graphic.line_join = PdfGraphic::DEFAULT_LINE_JOIN
     graphic.dash_pattern = [4, 2]
     graphic.dash_phase = 2
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       copied = path.clone
       5.times do
         copied.rotate rad: - Math::PI / 6, anchor: [3.cm, 0.cm]
@@ -129,14 +130,14 @@ page.add_content do |content|
     graphic.dash_phase = PdfGraphic::DEFAULT_DASH_PHASE
     graphic.stroke_color = PdfColor::Rgb.new red: 1.0
     graphic.fill_color = PdfColor::Rgb.new green: 1.0
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       copied = path.clone
       copied.h_flip x: 6.cm
       pen.stroke_fill copied
     end
 
     graphic.use_even_odd_rule = true
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       copied = path.clone
       copied.h_flip x: 6.cm
       copied.v_flip y: 3.cm
@@ -203,27 +204,27 @@ page.add_content do |content|
     graphic = PdfGraphic.new
     graphic.line_cap = PdfGraphic::LineCapStyle::ROUND
     graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       pen.stroke snowman_body
       pen.stroke snowman_mouth
     end
 
     graphic.fill_color = PdfColor::Rgb.new
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       snowman_eyes.each do |eye|
         pen.stroke_fill eye
       end
     end
 
     graphic.fill_color = PdfColor::Rgb.new red: 1.0
-    graphic.draw_on(content) do |pen|
+    graphic.write_in(content) do |pen|
       pen.stroke_fill snowman_hat
       pen.stroke_fill snowman_muffler
     end
   end
 
   graphic = PdfGraphic.new
-  graphic.draw_on(content) do |pen|
+  graphic.write_in(content) do |pen|
     basic_rect = PdfGraphic::Rectangle.new([7.cm, 8.cm], [10.cm, 10.cm])
     pen.stroke basic_rect
 
@@ -239,24 +240,24 @@ page.add_content do |content|
 
   content.stack_graphic_state do
     content.move_origin 70.mm, 190.mm
-    content.add_text do |text|
-      text.set_font pdf_font, 14
-      text.set_leading 16
-      text.puts "雪だるまの後ろに文字を出力！"
-      text.puts "マスクはちゃんと指定できてる？"
+    text = PdfText.new(pdf_font, 14)
+    text.leading = 16
+    text.write_in(content) do |pen|
+      pen.puts "雪だるまの後ろに文字を出力！"
+      pen.puts "マスクはちゃんと指定できてる？"
     end
   end
 
   image = PdfImage.new
   image.dpi = 350
-  image.draw_on(content) do |pen|
+  image.write_in(content) do |pen|
     pen.paint snowman_png, x: 80.mm, y: 210.mm
   end
 
-  content.add_text do |text|
-    text.set_font pdf_font, 10
-    text.return_cursor dy: (- sfnt_font.descender * 10 / 1000.0) # descenderの分だけ上へ移動
-    text.puts "原点はここ"
+  text = PdfText.new(pdf_font, 10)
+  text.write_in(content) do |pen|
+    pen.return_cursor dy: (- sfnt_font.descender * 10 / 1000.0) # descenderの分だけ上へ移動
+    pen.puts "原点はここ"
   end
 end
 
@@ -277,14 +278,13 @@ PdfOutlineItem.add_to(document, "ページ2", "page 2")
 next_page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 22.mm, 188.mm
-    content.add_text do |text|
-      text.set_font pdf_font, 14
-      text.set_leading 16
-
+    text = PdfText.new(pdf_font, 14)
+    text.leading = 16
+    text.write_in(content) do |pen|
       dests = ["page 1", "text", "image snowman", "image snowman.png", "page 2"]
       y_offset = 188.mm
       dests.each_with_index do |dest, t|
-        text.puts "Link#{t}"
+        pen.puts "Link#{t}"
         next_page.add_internal_link(
           dest, [22.mm, y_offset, 22.mm + 40.pt, y_offset + 14.pt], dest)
         y_offset -= 16.pt
@@ -294,15 +294,14 @@ next_page.add_content do |content|
 
   content.stack_graphic_state do
     content.move_origin 22.mm, 150.mm
-    content.add_text do |text|
-      text.set_font pdf_font, 14
-      text.set_leading 16
-
-      text.puts "Yahoo"
+    text = PdfText.new(pdf_font, 14)
+    text.leading = 16
+    text.write_in(content) do |pen|
+      pen.puts "Yahoo"
       next_page.add_external_link(
         URI.parse("https://www.yahoo.co.jp/"),
         [22.mm, 150.mm, 22.mm + 40.pt, 150.mm + 14.pt])
-      text.puts "TeXグッバイ本"
+      pen.puts "TeXグッバイ本"
       next_page.add_external_link(
         URI.parse("https://www.yamaimo.dev/entry/TexGoodBye1"),
         [22.mm, 150.mm - 16.pt, 22.mm + 90.pt, 150.mm - 16.pt + 14.pt],

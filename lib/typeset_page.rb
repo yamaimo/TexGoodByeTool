@@ -107,50 +107,8 @@ if __FILE__ == $0
   require_relative 'typeset_font'
   require_relative 'typeset_margin'
   require_relative 'typeset_padding'
-
-  class ContentMock
-
-    class TextMock
-
-      def return_cursor(dx: 0, dy: 0)
-        STDOUT.puts "  [return_cursor] dx: #{dx}, dy: #{dy}"
-      end
-
-      def set_font(pdf_font, size)
-        STDOUT.puts "  [set_font] id: #{pdf_font.id}, size: #{size}"
-      end
-
-      def set_leading(size)
-        STDOUT.puts "  [set_leading] size: #{size}"
-      end
-
-      def puts(str="")
-        STDOUT.puts "  [puts]"
-      end
-
-      def putc(char: nil, gid: 0)
-        STDOUT.puts "  [putc] gid: #{gid}"
-      end
-
-    end
-
-    def stack_graphic_state(&block)
-      puts "[stack_graphic_state] begin"
-      block.call
-      puts "[stack_graphic_state] end"
-    end
-
-    def move_origin(x, y)
-      puts "[move_origin] x: #{x}, y: #{y}"
-    end
-
-    def add_text(&block)
-      puts "[add_text]"
-      text = TextMock.new
-      block.call(text)
-    end
-
-  end
+  require_relative 'pdf_page'
+  require_relative 'pdf_object_binder'
 
   sfnt_font = SfntFont.load('ipaexm.ttf')
   font_size = 14
@@ -215,6 +173,13 @@ if __FILE__ == $0
     "(top: #{box2.padding.top}, right: #{box2.padding.right}, "\
     "bottom: #{box2.padding.bottom}, left: #{box2.padding.left})"
 
-  content = ContentMock.new
+  content = PdfPage::Content.new
   page.write_to(content)
+
+  binder = PdfObjectBinder.new
+  content.attach_to(binder)
+
+  binder.serialized_objects.each do |serialized_object|
+    puts serialized_object
+  end
 end
