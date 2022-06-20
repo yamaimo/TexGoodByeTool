@@ -13,32 +13,32 @@ class PdfText
     using HexExtension
     using PdfSerializeExtension
 
-    def initialize(operations, font)
-      @operations = operations
+    def initialize(content, font)
+      @content = content
       @font = font
     end
 
     def set_font(pdf_font, size)
       # NOTE: 今はここでpdf_fontに必要とされる機能がsfnt_fontと等しいので、
       # sfnt_fontも指定可能（本来はpdf_fontのみが指定されるべき）
-      @operations.push "#{pdf_font.id.to_sym.serialize} #{size} Tf"
+      @content.add_operation "#{pdf_font.id.to_sym.serialize} #{size} Tf"
       @font = pdf_font
     end
 
     def set_leading(size)
-      @operations.push "#{size} TL"
+      @content.add_operation "#{size} TL"
     end
 
     def set_text_rise(size)
-      @operations.push "#{size} Ts"
+      @content.add_operation "#{size} Ts"
     end
 
     def puts(str="")
       if str.nil? || str.empty?
-        @operations.push "T*"
+        @content.add_operation "T*"
       else
         encoded = @font.convert_to_gid(str).map(&:to_hex_str).join
-        @operations.push "<#{encoded}> Tj T*"
+        @content.add_operation "<#{encoded}> Tj T*"
       end
     end
 
@@ -47,19 +47,19 @@ class PdfText
         gid = @font.convert_to_gid(char).first
       end
       encoded = gid.to_hex_str
-      @operations.push "<#{encoded}> Tj"
+      @content.add_operation "<#{encoded}> Tj"
     end
 
     def put_space(n_chars)
       # 正だと間が狭まり、負だと間が広がる
       width = - n_chars * 1000
-      @operations.push "[#{width}] TJ"
+      @content.add_operation "[#{width}] TJ"
     end
 
     # カーソルを行頭に戻す
     # dx, dyが指定されていた場合、指定された分だけ行頭の位置を変更する
     def return_cursor(dx: 0, dy: 0)
-      @operations.push "#{dx} #{dy} Td"
+      @content.add_operation "#{dx} #{dy} Td"
     end
 
   end
@@ -73,12 +73,11 @@ class PdfText
 
   attr_accessor :font, :size, :leading, :text_rise
 
-  def draw_on(content, &block)  # write_inがよさそう
+  def write_in(content, &block)  # write_inがよさそう
     content.stack_graphic_state do
-      operations = content.operations
-      pen = Pen.new(operations, @font)
+      pen = Pen.new(content, @font)
 
-      operations.push "BT"
+      content.add_operation "BT"
 
       pen.set_font(@font, @size) if @font # FIXME: 本来@fontはnilでないべき
       pen.set_leading(@leading) if @leading != DEFAULT_LEADING
@@ -86,7 +85,7 @@ class PdfText
 
       block.call(pen)
 
-      operations.push "ET"
+      content.add_operation "ET"
     end
   end
 
@@ -109,7 +108,7 @@ if __FILE__ == $0
     pen.putc char: 'X'
   end
 
-  page_content = PdfPage::Content.new
+  content = PdfPage::Content.new
 
   sfnt_font = SfntFont.load('ipaexm.ttf')
   pdf_font = PdfFont.new(sfnt_font)
@@ -118,7 +117,7 @@ if __FILE__ == $0
 
   text = PdfText.new(pdf_font, font_size)
   text.leading = font_size + line_gap
-  text.draw_on(page_content) do |pen|
+  text.write_in(content) do |pen|
     ["ABCDE", "あいうえお", "斉斎齊齋", "\u{20B9F}\u{20D45}\u{20E6D}"].each do |str|
       pen.puts str
     end
@@ -128,7 +127,7 @@ if __FILE__ == $0
   end
 
   binder = PdfObjectBinder.new
-  page_content.attach_to(binder)
+  content.attach_to(binder)
 
   binder.serialized_objects.each do |serialized_object|
     puts serialized_object

@@ -8,16 +8,18 @@ class PdfPage
       @operations = []
     end
 
-    attr_reader :operations
+    def add_operation(operation)
+      @operations.push operation
+    end
 
     def stack_graphic_state(&block)
-      @operations.push "q"
+      self.add_operation "q"
       block.call
-      @operations.push "Q"
+      self.add_operation "Q"
     end
 
     def move_origin(x, y)
-      @operations.push "1. 0. 0. 1. #{x} #{y} cm"
+      self.add_operation "1. 0. 0. 1. #{x} #{y} cm"
     end
 
     def attach_to(binder)

@@ -209,55 +209,55 @@ class PdfGraphic
 
   class Pen
 
-    def initialize(operations, use_even_odd_rule: DEFAULT_USE_EVEN_ODD_RULE)
-      @operations = operations
+    def initialize(content, use_even_odd_rule: DEFAULT_USE_EVEN_ODD_RULE)
+      @content = content
       @use_even_odd_rule = use_even_odd_rule
     end
 
     attr_accessor :use_even_odd_rule
 
     def set_line_width(line_width)
-      @operations.push "#{line_width} w"
+      @content.add_operation "#{line_width} w"
     end
 
     def set_line_cap(line_cap)
-      @operations.push "#{line_cap} J"
+      @content.add_operation "#{line_cap} J"
     end
 
     def set_line_join(line_join)
-      @operations.push "#{line_join} j"
+      @content.add_operation "#{line_join} j"
     end
 
     def set_miter_limit(miter_limit)
-      @operations.push "#{miter_limit} M"
+      @content.add_operation "#{miter_limit} M"
     end
 
     def set_dash(dash_pattern, dash_phase)
-      @operations.push "[#{dash_pattern.join(' ')}] #{dash_phase} d"
+      @content.add_operation "[#{dash_pattern.join(' ')}] #{dash_phase} d"
     end
 
     def set_stroke_color(color)
-      @operations.push color.stroke_color_operation
+      @content.add_operation color.stroke_color_operation
     end
 
     def set_fill_color(color)
-      @operations.push color.fill_color_operation
+      @content.add_operation color.fill_color_operation
     end
 
     def stroke(path)
-      @operations.push "#{path.to_pen_operand}S"
+      @content.add_operation "#{path.to_pen_operand}S"
     end
 
     def fill(path)
       operation = "#{path.to_pen_operand}f"
       operation += "*" if @use_even_odd_rule
-      @operations.push operation
+      @content.add_operation operation
     end
 
     def stroke_fill(path)
       operation = "#{path.to_pen_operand}B"
       operation += "*" if @use_even_odd_rule
-      @operations.push operation
+      @content.add_operation operation
     end
 
   end
@@ -277,9 +277,9 @@ class PdfGraphic
   attr_accessor :line_width, :line_cap, :line_join, :miter_limit, :dash_pattern, :dash_phase
   attr_accessor :stroke_color, :fill_color, :use_even_odd_rule
 
-  def draw_on(content, &block)
+  def write_in(content, &block)
     content.stack_graphic_state do
-      pen = Pen.new(content.operations, use_even_odd_rule: @use_even_odd_rule)
+      pen = Pen.new(content, use_even_odd_rule: @use_even_odd_rule)
 
       pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
       pen.set_line_cap(@line_cap) if @line_cap != DEFAULT_LINE_CAP
@@ -299,7 +299,7 @@ if __FILE__ == $0
   require_relative 'pdf_page'
   require_relative 'pdf_object_binder'
 
-  page_content = PdfPage::Content.new
+  content = PdfPage::Content.new
 
   path = PdfGraphic::Path.new do
     from [0, 0]
@@ -308,11 +308,11 @@ if __FILE__ == $0
   end
 
   graphic = PdfGraphic.new
-  graphic.draw_on(page_content) do |pen|
+  graphic.write_in(content) do |pen|
     pen.stroke path
   end
 
-  graphic.draw_on(page_content) do |pen|
+  graphic.write_in(content) do |pen|
     copied = path.clone
     copied.scale ratio: 1.5
     pen.stroke copied
@@ -321,7 +321,7 @@ if __FILE__ == $0
   graphic.line_width = 5
   graphic.line_cap = PdfGraphic::LineCapStyle::ROUND
   graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
-  graphic.draw_on(page_content) do |pen|
+  graphic.write_in(content) do |pen|
     copied = path.clone
     copied.move dx: 1, dy: 2
     pen.stroke copied
@@ -331,7 +331,7 @@ if __FILE__ == $0
   graphic.line_join = PdfGraphic::DEFAULT_LINE_JOIN
   graphic.dash_pattern = [4, 2]
   graphic.dash_phase = 2
-  graphic.draw_on(page_content) do |pen|
+  graphic.write_in(content) do |pen|
     copied = path.clone
     copied.rotate rad: Math::PI/4, anchor: [1, 1]
     pen.stroke copied
@@ -341,21 +341,21 @@ if __FILE__ == $0
   graphic.dash_phase = PdfGraphic::DEFAULT_DASH_PHASE
   graphic.stroke_color = PdfColor::Rgb.new red: 1.0
   graphic.fill_color = PdfColor::Rgb.new green: 1.0
-  graphic.draw_on(page_content) do |pen|
+  graphic.write_in(content) do |pen|
     copied = path.clone
     copied.h_flip x: 4
     pen.stroke_fill copied
   end
 
   graphic.use_even_odd_rule = true
-  graphic.draw_on(page_content) do |pen|
+  graphic.write_in(content) do |pen|
     copied = path.clone
     copied.v_flip y: 4
     pen.stroke_fill copied
   end
 
   graphic = PdfGraphic.new
-  graphic.draw_on(page_content) do |pen|
+  graphic.write_in(content) do |pen|
     basic_rect = PdfGraphic::Rectangle.new([0, 0], [2, 3])
     pen.stroke basic_rect
 
@@ -370,7 +370,7 @@ if __FILE__ == $0
   end
 
   binder = PdfObjectBinder.new
-  page_content.attach_to(binder)
+  content.attach_to(binder)
 
   binder.serialized_objects.each do |serialized_object|
     puts serialized_object
