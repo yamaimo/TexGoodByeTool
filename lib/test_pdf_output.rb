@@ -308,6 +308,20 @@ next_page.add_content do |content|
         "TeXグッバイしたい")
     end
   end
+
+  content.stack_graphic_state do
+    content.move_origin 22.mm, 40.mm
+
+    text = PdfText.new(pdf_font, 32)
+    text.rendering_mode = PdfText::RenderingMode::FILL_STROKE
+    text.line_width = 0.5
+    text.stroke_color = PdfColor::Rgb.new red: 1.0
+    text.fill_color = PdfColor::Rgb.new green: 1.0
+    text.write_in(content) do |pen|
+      put_tex(pen, 32)
+      pen.puts "グッバイしたい！"
+    end
+  end
 end
 
 writer = PdfWriter.new("output_test.pdf")

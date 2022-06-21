@@ -1,12 +1,24 @@
 # PDFテキスト
 
 require_relative 'hex_extension'
+require_relative 'pdf_color'
 require_relative 'pdf_serialize_extension'
 
 class PdfText
 
+  module RenderingMode
+    FILL = 0
+    STROKE = 1
+    FILL_STROKE = 2
+    INVISIBLE = 3
+  end
+
   DEFAULT_LEADING = 0
   DEFAULT_TEXT_RISE = 0
+  DEFAULT_RENDERING_MODE = RenderingMode::FILL
+  DEFAULT_LINE_WIDTH = 1.0
+  DEFAULT_STROKE_COLOR = PdfColor::Gray.new.freeze
+  DEFAULT_FILL_COLOR = PdfColor::Gray.new.freeze
 
   class Pen
 
@@ -31,6 +43,22 @@ class PdfText
 
     def set_text_rise(size)
       @content.add_operation "#{size} Ts"
+    end
+
+    def set_rendering_mode(rendering_mode)
+      @content.add_operation "#{rendering_mode} Tr"
+    end
+
+    def set_line_width(line_width)
+      @content.add_operation "#{line_width} w"
+    end
+
+    def set_stroke_color(color)
+      @content.add_operation color.stroke_color_operation
+    end
+
+    def set_fill_color(color)
+      @content.add_operation color.fill_color_operation
     end
 
     def puts(str="")
@@ -69,9 +97,14 @@ class PdfText
     @size = font_size
     @leading = DEFAULT_LEADING
     @text_rise = DEFAULT_TEXT_RISE
+    @rendering_mode = DEFAULT_RENDERING_MODE
+    @line_width = DEFAULT_LINE_WIDTH
+    @stroke_color = DEFAULT_STROKE_COLOR
+    @fill_color = DEFAULT_FILL_COLOR
   end
 
   attr_accessor :font, :size, :leading, :text_rise
+  attr_accessor :rendering_mode, :line_width, :stroke_color, :fill_color
 
   def write_in(content, &block)
     content.stack_graphic_state do
@@ -82,6 +115,10 @@ class PdfText
       pen.set_font(@font, @size) if @font # FIXME: 本来@fontはnilでないべき
       pen.set_leading(@leading) if @leading != DEFAULT_LEADING
       pen.set_text_rise(@text_rise) if @text_rise != DEFAULT_TEXT_RISE
+      pen.set_rendering_mode(@rendering_mode) if @rendering_mode != DEFAULT_RENDERING_MODE
+      pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
+      pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
+      pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
 
       block.call(pen)
 
@@ -124,6 +161,16 @@ if __FILE__ == $0
     pen.puts
     put_tex(pen, 14)
     pen.puts "グッバイしたい！"
+  end
+
+  text = PdfText.new(pdf_font, font_size)
+  text.leading = font_size + line_gap
+  text.rendering_mode = PdfText::RenderingMode::FILL_STROKE
+  text.line_width = 2
+  text.stroke_color = PdfColor::Rgb.new red: 1.0
+  text.fill_color = PdfColor::Rgb.new green: 1.0
+  text.write_in(content) do |pen|
+    pen.puts "装飾文字"
   end
 
   binder = PdfObjectBinder.new
