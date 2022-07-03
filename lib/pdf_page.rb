@@ -1,10 +1,18 @@
 # PDFページ
 
+require 'forwardable'
+
+require_relative 'pdf_destination'
+
 class PdfPage
 
   class Content
 
-    def initialize
+    extend Forwardable
+
+    def initialize(document, page)
+      @document = document
+      @page = page
       @operations = []
     end
 
@@ -21,6 +29,13 @@ class PdfPage
     def move_origin(x, y)
       self.add_operation "1. 0. 0. 1. #{x} #{y} cm"
     end
+
+    def add_destination(name, x, y)
+      destination = PdfDestination.new(@page, x, y)
+      @document.add_destination(name, destination)
+    end
+
+    def_delegators :@page, :add_internal_link, :add_external_link
 
     def attach_to(binder)
       stream = @operations.join("\n")
@@ -76,14 +91,16 @@ class PdfPage
   end
 
   def self.add_to(document)
-    page = PdfPage.new
+    page = PdfPage.new(document)
     document.add_page(page)
     page
   end
 
-  def initialize
-    @content = Content.new
+  def initialize(document)
+    @content = Content.new(document, self)
     @links = []
+    # @parentはPdfDocumentではなく
+    # PdfDocument::PageTreeなことに注意
     @parent = nil
   end
 
@@ -130,6 +147,7 @@ if __FILE__ == $0
 
     def initialize
       @pages = []
+      @dests = {}
     end
 
     def add_page(page)
@@ -137,8 +155,15 @@ if __FILE__ == $0
       page.parent = self
     end
 
+    def add_destination(name, dest)
+      @dests[name] = dest
+    end
+
     def attach_to(binder)
       @pages.each{|page| page.attach_to(binder)}
+      @dests.each do |name, dest|
+        binder.attach(dest, {Name: name.to_sym, Dest: dest.to_a(binder)})
+      end
 
       binder.attach(self, {Type: :Document})
     end
@@ -150,11 +175,24 @@ if __FILE__ == $0
   document = PdfDocumentMock.new
   page = PdfPage.add_to(document)
 
-  page.add_internal_link("id:ABC", [22.mm, 188.mm-14.pt, 22.mm+14.pt*3, 188.mm])
-  page.add_internal_link("id:あいうえお", [22.mm, 188.mm-16.pt-14.pt, 22.mm+14.pt*5, 188.mm-16.pt], "あいうえお")
+  page.add_content do |content|
+    content.add_internal_link(
+      "id:ABC",
+      [22.mm, 188.mm-14.pt, 22.mm+14.pt*3, 188.mm])
+    content.add_internal_link(
+      "id:あいうえお",
+      [22.mm, 188.mm-16.pt-14.pt, 22.mm+14.pt*5, 188.mm-16.pt],
+      "あいうえお")
 
-  page.add_external_link(URI.parse("http://www.hoge.huga"), [1, 2, 3, 4])
-  page.add_external_link(URI.parse("https://www.hoge.huga/a/b/c"), [1, 2, 3, 4], "ほげ")
+    content.add_external_link(
+      URI.parse("http://www.hoge.huga"),
+      [1, 2, 3, 4])
+    content.add_external_link(
+      URI.parse("https://www.hoge.huga/a/b/c"),
+      [1, 2, 3, 4], "ほげ")
+
+    content.add_destination("id:ABC", 1, 2)
+  end
 
   binder = PdfObjectBinder.new
   document.attach_to(binder)
