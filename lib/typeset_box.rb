@@ -125,7 +125,7 @@ if __FILE__ == $0
     "(top: #{box2.padding.top}, right: #{box2.padding.right}, "\
     "bottom: #{box2.padding.bottom}, left: #{box2.padding.left})"
 
-  content = PdfPage::Content.new
+  content = PdfPage::Content.new(nil, nil)
   box1.write_to(content)
   box2.write_to(content)
 

@@ -173,7 +173,7 @@ if __FILE__ == $0
   require_relative 'pdf_page'
   require_relative 'pdf_object_binder'
 
-  content = PdfPage::Content.new
+  content = PdfPage::Content.new(nil, nil)
 
   png = PdfImage::Png.load('christmas_snowman.png')
   puts "path: #{png.path}"
