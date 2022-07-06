@@ -5,6 +5,7 @@
 target "sample" do
   output "README.pdf"
   sources "README.md"
+  macro "macro.rb"
   style "normal"
 end
 
@@ -47,6 +48,11 @@ style "normal" do
   block "h2" do
     margin top: 20.pt, bottom: 14.pt
     font name: "hiramin_bold", size: 12.pt
+  end
+
+  block "h3" do
+    margin top: 16.pt, bottom: 12.pt
+    font name: "hiramin_bold", size: 10.pt
   end
 
   block "p" do
