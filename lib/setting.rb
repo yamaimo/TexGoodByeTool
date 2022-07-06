@@ -15,10 +15,11 @@ class Setting
     def initialize
       @output = nil
       @sources = []
+      @macro = nil
       @style = nil
     end
 
-    attr_reader :output, :sources
+    attr_reader :output, :sources, :macro
     attr_accessor :style
 
     def output=(path)
@@ -27,6 +28,10 @@ class Setting
 
     def add_source(path)
       @sources.push Pathname.new(path)
+    end
+
+    def macro=(path)
+      @macro = Pathname.new(path)
     end
 
     def raise_if_invalid
@@ -212,6 +217,7 @@ if __FILE__ == $0
   target.output = "hogehuga.pdf"
   target.add_source("hoge.md")
   target.add_source("huga.md")
+  target.macro = "macro.rb"
   target.style = "normal"
 
   target = setting.targets["readme"] = Setting::Target.new
@@ -274,6 +280,7 @@ if __FILE__ == $0
     puts "target: #{name}"
     puts "  output : #{target.output}"
     puts "  sources: #{target.sources.join(', ')}"
+    puts "  macro  : #{target.macro || '(none)'}"
     puts "  style  : #{target.style}"
   end
 

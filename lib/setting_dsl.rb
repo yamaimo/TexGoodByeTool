@@ -25,6 +25,10 @@ class SettingDsl
       end
     end
 
+    def macro(path)
+      @setting.macro = path
+    end
+
     def style(name)
       @setting.style = name
     end
@@ -207,6 +211,7 @@ if __FILE__ == $0
     target "sample" do
       output "hogehuga.pdf"
       sources "hoge.md", "huga.md"
+      macro "macro.rb"
       style "normal"
     end
 
@@ -296,6 +301,7 @@ if __FILE__ == $0
     puts "target: #{name}"
     puts "  output : #{target.output}"
     puts "  sources: #{target.sources.join(', ')}"
+    puts "  macro  : #{target.macro || '(none)'}"
     puts "  style  : #{target.style}"
   end
 

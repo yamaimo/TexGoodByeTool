@@ -52,12 +52,16 @@ end
 setting.targets.each do |name, target|
   output = target.output
   sources = target.sources
+  macro = target.macro
+
+  depend_files = sources + tool_files + lib_files
+  depend_files.push macro if macro
 
   task name => output
 
-  file output => (sources + tool_files + lib_files) do
+  file output => depend_files do
     style = setting.styles[target.style]
-    md2pdf output, sources, style, setting.fonts
+    md2pdf output, sources, macro, style, setting.fonts
   end
 
   CLEAN.include(output)
