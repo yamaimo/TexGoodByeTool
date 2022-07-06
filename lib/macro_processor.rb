@@ -16,12 +16,8 @@ class MacroProcessor
     COMM_STAG = "{#"
     COMM_ETAG = "#}"
 
-    REGEXP = /({{|{%|{#)(.*?)(}}|%}|#})([ \t]*\r?\n)?/m
-    # 上記だとエスケープ処理が厄介。
-    # /(開始のエスケープ)|(開始〜終了)/
-    # みたいにして、開始のエスケープのときにはそれだけ出してやるとよさそう。
-    # 開始さえされなければ終了が単体でいるのはエスケープ不要になるので。
-    # memo: /xxx#{exp}yyy/oとすれば、一度だけexpが式展開される
+    # (?:\(esc_stag)|(?:(stag)(code)(etag)(rspace))という構造
+    REGEXP = /(?:\\({{|{%|{#))|(?:({{|{%|{#)(.*?)(}}|%}|#})([ \t]*\r?\n)?)/m
 
     BUFVAR = "_buf"
 
@@ -37,21 +33,25 @@ class MacroProcessor
 
         pos = 0
         is_bol = true   # bol = beginning of line
-        @template.scan(REGEXP) do |stag, code, etag, rspace|
+        @template.scan(REGEXP) do |esc_stag, stag, code, etag, rspace|
           match = Regexp.last_match
           len = match.begin(0) - pos
           text = @template[pos, len]
 
-          case stag
-          when EXPR_STAG
-            handle_expression(text, code, rspace)
-          when CODE_STAG
-            handle_code(is_bol, text, code, rspace)
-          when COMM_STAG
-            handle_comment(is_bol, text, code, rspace)
+          if esc_stag
+            handle_escape(text, esc_stag)
           else
-            # ここには来ないはず
-            raise "Invalid start tag: #{stag}"
+            case stag
+            when EXPR_STAG
+              handle_expression(text, code, rspace)
+            when CODE_STAG
+              handle_code(is_bol, text, code, rspace)
+            when COMM_STAG
+              handle_comment(is_bol, text, code, rspace)
+            else
+              # ここには来ないはず
+              raise "Invalid start tag: #{stag}"
+            end
           end
 
           pos = match.end(0)
@@ -78,6 +78,11 @@ class MacroProcessor
       @src << "\n" if @src[-1] != "\n"
       @src << "#{BUFVAR}.to_s\n"
       @src << "; ensure\n  " << BUFVAR << " = __original_outvar\nend\n"
+    end
+
+    def handle_escape(text, esc_stag)
+      add_text(text)
+      add_text(esc_stag)
     end
 
     def handle_expression(text, code, rspace)
@@ -217,6 +222,10 @@ if __FILE__ == $0
     Hello {{ name }}.
 
     "'"と"\\"のエスケープはOK?
+
+    \\{{ここは評価されない}}
+    }}
+    \\{{
 
     {% 5.times do |i| %}
     - {{ i }} * {{ i }} = {{ i * i }}
