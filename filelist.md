@@ -79,14 +79,13 @@ vol.2 PDFのはなし
 1章 PDF概要
 ---------------
 
-(none)
+- `pdf_serialize_extension.rb`
+- `pdf_object_binder.rb`
+    - depend: `pdf_serialize_extension`
 
 2章 ファイル形式
 ----------------
 
-- `pdf_serialize_extension.rb`
-- `pdf_object_binder.rb`
-    - depend: `pdf_serialize_extension`
 - `pdf_writer.rb`
     - depend: `pdf_serialize_extension`
     - depend: `pdf_object_binder`
@@ -154,6 +153,7 @@ others
 - `dom_handler.rb`
 - `inline_node_handler.rb`
 - `inline_node_style.rb`
+- `macro_processor.rb`
 - `markdown_parser.rb`
 - `page_handler.rb`
 - `page_style.rb`
