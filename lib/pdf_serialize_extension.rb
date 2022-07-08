@@ -6,39 +6,30 @@ require 'uri'
 module PdfSerializeExtension
 
   refine TrueClass do
-
     def serialize
       "true"
     end
-
   end
 
   refine FalseClass do
-
     def serialize
       "false"
     end
-
   end
 
   refine NilClass do
-
     def serialize
       "null"
     end
-
   end
 
   refine Numeric do
-
     def serialize
       self.to_s
     end
-
   end
 
   refine Symbol do
-
     def serialize
       # エスケープが必要なバイト
       bytes_to_be_escaped = "()<>[]{}/%#".bytes
@@ -55,30 +46,24 @@ module PdfSerializeExtension
 
       "/#{encoded}"
     end
-
   end
 
   refine String do
-
     def serialize
       bom = "feff"
       utf16be_hexstr = self.encode("UTF-16BE").unpack("H*").first
       "<#{bom}#{utf16be_hexstr}>"
     end
-
   end
 
   refine Array do
-
     def serialize
       values = self.each.map(&:serialize).join(" ")
       "[#{values}]"
     end
-
   end
 
   refine Hash do
-
     def serialize
       if self.empty?
         "<<>>"
@@ -91,34 +76,27 @@ module PdfSerializeExtension
         "<<\n#{pairs}\n>>"
       end
     end
-
   end
 
   refine Time do
-
     def serialize
       # 書式は"(D:YYYYMMDDHHmmSSOHH'mm')"でOは+/-
       datetime_str = self.strftime("%Y%m%d%H%M%S")
       zone_str = self.strftime("%:z'").sub(":", "'")
       "(D:#{datetime_str}#{zone_str})"
     end
-
   end
 
   refine Digest::Base do
-
     def serialize
       "<#{self.hexdigest}>"
     end
-
   end
 
   refine URI::Generic do
-
     def serialize
       "(#{self.to_s})"
     end
-
   end
 
 end

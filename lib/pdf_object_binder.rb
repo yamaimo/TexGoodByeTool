@@ -1,5 +1,6 @@
 # PDFオブジェクトバインダー
-# 各PDFオブジェクトはattach_to(binder)を実装し、binderにオブジェクトを結びつける
+# 各PDFオブジェクトはattach_to(binder)を実装し、
+# binderにオブジェクトを結びつける
 
 require_relative 'pdf_serialize_extension'
 
@@ -8,7 +9,6 @@ class PdfObjectBinder
   using PdfSerializeExtension
 
   class ObjectRef
-
     def initialize(id)
       @id = id
     end
@@ -16,7 +16,6 @@ class PdfObjectBinder
     def serialize
       "#{@id} 0 R"
     end
-
   end
 
   def initialize
