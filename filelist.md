@@ -90,10 +90,9 @@ vol.2 PDFのはなし
     - depend: `pdf_serialize_extension`
     - depend: `pdf_object_binder`
 - `length_extension.rb`
-- `hello_pdf.rb` (not yet)
-    - depend: `pdf_object_binder`
-    - depend: `pdf_writer`
+- `hello_pdf.rb`
     - depend: `length_extension`
+    - depend: `pdf_writer`
 
 3章 ドキュメントとページ
 ------------------------
