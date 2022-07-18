@@ -1,18 +1,10 @@
 # PDFページ
 
-require 'forwardable'
-
-require_relative 'pdf_destination'
-
 class PdfPage
 
   class Content
 
-    extend Forwardable
-
-    def initialize(document, page)
-      @document = document
-      @page = page
+    def initialize
       @operations = []
     end
 
@@ -30,13 +22,6 @@ class PdfPage
       self.add_operation "1. 0. 0. 1. #{x} #{y} cm"
     end
 
-    def add_destination(name, x, y)
-      destination = PdfDestination.new(@page, x, y)
-      @document.add_destination(name, destination)
-    end
-
-    def_delegators :@page, :add_internal_link, :add_external_link
-
     def attach_to(binder)
       stream = @operations.join("\n")
       length = stream.bytesize + "\n".bytesize
@@ -46,58 +31,14 @@ class PdfPage
 
   end
 
-  class InternalLink
-
-    def initialize(destination_name, rect, alt=nil)
-      @destination_name = destination_name
-      @rect = rect
-      @alt = alt
-    end
-
-    def attach_to(binder)
-      link_dict = {
-        Subtype: :Link,
-        Rect: @rect,
-        Border: [0, 0, 0],
-        Dest: @destination_name.to_sym,
-      }
-      link_dict[:Contents] = @alt if @alt
-
-      binder.attach(self, link_dict)
-    end
-
-  end
-
-  class ExternalLink
-
-    def initialize(uri, rect, alt=nil)
-      @uri = uri
-      @rect = rect
-      @alt = alt
-    end
-
-    def attach_to(binder)
-      link_dict = {
-        Subtype: :Link,
-        Rect: @rect,
-        Border: [0, 0, 0],
-        A: {S: :URI, URI: @uri},
-      }
-      link_dict[:Contents] = @alt if @alt
-
-      binder.attach(self, link_dict)
-    end
-
-  end
-
   def self.add_to(document)
-    page = PdfPage.new(document)
+    page = PdfPage.new
     document.add_page(page)
     page
   end
 
-  def initialize(document)
-    @content = Content.new(document, self)
+  def initialize
+    @content = Content.new
     @links = []
     # @parentはPdfDocumentではなく
     # PdfDocument::PageTreeなことに注意
@@ -112,14 +53,8 @@ class PdfPage
     block.call(@content)
   end
 
-  def add_internal_link(destination_name, rect, alt=nil)
-    link = InternalLink.new(destination_name, rect, alt)
-    @links.push link
-  end
-
-  def add_external_link(uri, rect, alt=nil)
-    link = ExternalLink.new(uri, rect, alt)
-    @links.push link
+  def add_link(pdf_link)
+    @links.push pdf_link
   end
 
   def attach_to(binder)
@@ -142,6 +77,9 @@ if __FILE__ == $0
 
   require_relative 'length_extension'
   require_relative 'pdf_object_binder'
+  require_relative 'pdf_internal_link'
+  require_relative 'pdf_external_link'
+  require_relative 'pdf_destination'
 
   class PdfDocumentMock
 
@@ -176,23 +114,25 @@ if __FILE__ == $0
   page = PdfPage.add_to(document)
 
   page.add_content do |content|
-    content.add_internal_link(
+    content.stack_graphic_state do
+      content.move_origin(1, 2)
+    end
+  end
+
+  page.add_link(
+    PdfInternalLink.new(
       "id:ABC",
-      [22.mm, 188.mm-14.pt, 22.mm+14.pt*3, 188.mm])
-    content.add_internal_link(
+      [22.mm, 188.mm-14.pt, 22.mm+14.pt*3, 188.mm]))
+  page.add_link(
+    PdfInternalLink.new(
       "id:あいうえお",
       [22.mm, 188.mm-16.pt-14.pt, 22.mm+14.pt*5, 188.mm-16.pt],
-      "あいうえお")
+      "あいうえお"))
 
-    content.add_external_link(
-      URI.parse("http://www.hoge.huga"),
-      [1, 2, 3, 4])
-    content.add_external_link(
-      URI.parse("https://www.hoge.huga/a/b/c"),
-      [1, 2, 3, 4], "ほげ")
+  page.add_link(PdfExternalLink.new(URI.parse("http://www.hoge.huga"), [1, 2, 3, 4]))
+  page.add_link(PdfExternalLink.new(URI.parse("https://www.hoge.huga/a/b/c"), [1, 2, 3, 4], "ほげ"))
 
-    content.add_destination("id:ABC", 1, 2)
-  end
+  document.add_destination("id:ABC", PdfDestination.new(page, 1, 2))
 
   binder = PdfObjectBinder.new
   document.attach_to(binder)

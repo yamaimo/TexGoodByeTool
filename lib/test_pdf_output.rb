@@ -11,6 +11,9 @@ require_relative 'pdf_page'
 require_relative 'pdf_graphic'
 require_relative 'pdf_image'
 require_relative 'pdf_text'
+require_relative 'pdf_internal_link'
+require_relative 'pdf_external_link'
+require_relative 'pdf_destination'
 require_relative 'pdf_outline_item'
 require_relative 'pdf_writer'
 
@@ -258,12 +261,12 @@ page.add_content do |content|
     pen.return_cursor dy: (- sfnt_font.descender * 10 / 1000.0) # descenderの分だけ上へ移動
     pen.puts "原点はここ"
   end
-
-  content.add_destination("page 1", 0.mm, 210.mm)
-  content.add_destination("text", 22.mm, 188.mm + 14.pt)
-  content.add_destination("image snowman", 108.mm-25.pt, 40.mm+25.pt)
-  content.add_destination("image snowman.png", 80.mm, 210.mm)
 end
+
+document.add_destination("page 1", PdfDestination.new(page, 0.mm, 210.mm))
+document.add_destination("text", PdfDestination.new(page, 22.mm, 188.mm + 14.pt))
+document.add_destination("image snowman", PdfDestination.new(page, 108.mm-25.pt, 40.mm+25.pt))
+document.add_destination("image snowman.png", PdfDestination.new(page, 80.mm, 210.mm))
 
 next_page = PdfPage.add_to(document)
 next_page.add_content do |content|
@@ -276,8 +279,8 @@ next_page.add_content do |content|
       y_offset = 188.mm
       dests.each_with_index do |dest, t|
         pen.puts "Link#{t}"
-        content.add_internal_link(
-          dest, [22.mm, y_offset, 22.mm + 40.pt, y_offset + 14.pt], dest)
+        next_page.add_link(
+          PdfInternalLink.new(dest, [22.mm, y_offset, 22.mm + 40.pt, y_offset + 14.pt], dest))
         y_offset -= 16.pt
       end
     end
@@ -289,14 +292,16 @@ next_page.add_content do |content|
     text.leading = 16
     text.write_in(content) do |pen|
       pen.puts "Yahoo"
-      content.add_external_link(
-        URI.parse("https://www.yahoo.co.jp/"),
-        [22.mm, 150.mm, 22.mm + 40.pt, 150.mm + 14.pt])
+      next_page.add_link(
+        PdfExternalLink.new(
+          URI.parse("https://www.yahoo.co.jp/"),
+          [22.mm, 150.mm, 22.mm + 40.pt, 150.mm + 14.pt]))
       pen.puts "TeXグッバイ本"
-      content.add_external_link(
-        URI.parse("https://www.yamaimo.dev/entry/TexGoodBye1"),
-        [22.mm, 150.mm - 16.pt, 22.mm + 90.pt, 150.mm - 16.pt + 14.pt],
-        "TeXグッバイしたい")
+      next_page.add_link(
+        PdfExternalLink.new(
+          URI.parse("https://www.yamaimo.dev/entry/TexGoodBye1"),
+          [22.mm, 150.mm - 16.pt, 22.mm + 90.pt, 150.mm - 16.pt + 14.pt],
+          "TeXグッバイしたい"))
     end
   end
 
@@ -313,9 +318,9 @@ next_page.add_content do |content|
       pen.puts "グッバイしたい！"
     end
   end
-
-  content.add_destination("page 2", 0.mm, 210.mm)
 end
+
+document.add_destination("page 2", PdfDestination.new(next_page, 0.mm, 210.mm))
 
 page1_outline = PdfOutlineItem.add_to(document, "ページ1", "page 1")
 PdfOutlineItem.add_to(page1_outline, "テキスト", "text")
