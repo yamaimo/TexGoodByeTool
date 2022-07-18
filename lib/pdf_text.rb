@@ -145,7 +145,7 @@ if __FILE__ == $0
     pen.putc char: 'X'
   end
 
-  content = PdfPage::Content.new(nil, nil)
+  content = PdfPage::Content.new
 
   sfnt_font = SfntFont.load('ipaexm.ttf')
   pdf_font = PdfFont.new(sfnt_font)

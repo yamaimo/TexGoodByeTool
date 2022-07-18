@@ -299,7 +299,7 @@ if __FILE__ == $0
   require_relative 'pdf_page'
   require_relative 'pdf_object_binder'
 
-  content = PdfPage::Content.new(nil, nil)
+  content = PdfPage::Content.new
 
   path = PdfGraphic::Path.new do
     from [0, 0]

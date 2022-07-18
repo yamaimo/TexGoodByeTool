@@ -129,9 +129,10 @@ vol.2 PDFのはなし
 ------------------------
 
 - `pdf_destination.rb`
+- `pdf_internal_link.rb`
+- `pdf_external_link.rb`
 - `pdf_outline_item.rb`
 - `pdf_document.rb` (再掲)
-- `pdf_page.rb` (再掲)
 - `test_pdf_output.rb` (要分割)
     - depend: `pdf_font`
     - depend: `length_extension`
