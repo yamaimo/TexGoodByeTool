@@ -80,8 +80,12 @@ class PdfDocument
       @images.each {|id, image| image.attach_to(binder)}
 
       resource_dict = {
-        Font: @fonts.transform_values{|font| binder.get_ref(font)},
-        XObject: @images.transform_values{|image| binder.get_ref(image)},
+        Font: @fonts.transform_values do |font|
+          binder.get_ref(font)
+        end,
+        XObject: @images.transform_values do |image|
+          binder.get_ref(image)
+        end,
       }
       binder.attach(self, resource_dict)
     end
