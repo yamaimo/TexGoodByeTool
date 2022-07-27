@@ -110,7 +110,7 @@ vol.2 PDFのはなし
     - depend: `pdf_color`
 - `pdf_image.rb`
     - depend: `pdf_serialize_extension`
-- `test_pdf_output.rb` (要分割)
+- `test_pdf_graphics.rb`
 
 5章 フォントとテキスト
 ----------------------
