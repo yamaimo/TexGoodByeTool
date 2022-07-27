@@ -68,7 +68,9 @@ class PdfGraphic
 
     def rotate(rad: 0, anchor: [0, 0])
       self.move dx: -anchor[0], dy: -anchor[1]
-      @operands = @operands.map{|x, y| [cos(rad) * x - sin(rad) * y, sin(rad) * x + cos(rad) * y]}
+      @operands = @operands.map do |x, y|
+        [cos(rad) * x - sin(rad) * y, sin(rad) * x + cos(rad) * y]
+      end
       self.move dx: anchor[0], dy: anchor[1]
     end
 
@@ -209,7 +211,8 @@ class PdfGraphic
 
   class Pen
 
-    def initialize(content, use_even_odd_rule: DEFAULT_USE_EVEN_ODD_RULE)
+    def initialize(content,
+                   use_even_odd_rule: DEFAULT_USE_EVEN_ODD_RULE)
       @content = content
       @use_even_odd_rule = use_even_odd_rule
     end
@@ -233,7 +236,8 @@ class PdfGraphic
     end
 
     def set_dash(dash_pattern, dash_phase)
-      @content.add_operation "[#{dash_pattern.join(' ')}] #{dash_phase} d"
+      @content.add_operation \
+        "[#{dash_pattern.join(' ')}] #{dash_phase} d"
     end
 
     def set_stroke_color(color)
@@ -274,20 +278,29 @@ class PdfGraphic
     @use_even_odd_rule = DEFAULT_USE_EVEN_ODD_RULE
   end
 
-  attr_accessor :line_width, :line_cap, :line_join, :miter_limit, :dash_pattern, :dash_phase
+  attr_accessor :line_width, :line_cap, :line_join, :miter_limit
+  attr_accessor :dash_pattern, :dash_phase
   attr_accessor :stroke_color, :fill_color, :use_even_odd_rule
 
   def write_in(content, &block)
     content.stack_graphic_state do
       pen = Pen.new(content, use_even_odd_rule: @use_even_odd_rule)
 
-      pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
-      pen.set_line_cap(@line_cap) if @line_cap != DEFAULT_LINE_CAP
-      pen.set_line_join(@line_join) if @line_join != DEFAULT_LINE_JOIN
-      pen.set_miter_limit(@miter_limit) if @miter_limit != DEFAULT_MITER_LIMIT
-      pen.set_dash(@dash_pattern, @dash_phase) if @dash_pattern != DEFAULT_DASH_PATTERN
-      pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
-      pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
+      # 本来は後置ifでOK（折り返しの都合）
+      if @line_width != DEFAULT_LINE_WIDTH
+        pen.set_line_width(@line_width) end
+      if @line_cap != DEFAULT_LINE_CAP
+        pen.set_line_cap(@line_cap) end
+      if @line_join != DEFAULT_LINE_JOIN
+        pen.set_line_join(@line_join) end
+      if @miter_limit != DEFAULT_MITER_LIMIT
+        pen.set_miter_limit(@miter_limit) end
+      if @dash_pattern != DEFAULT_DASH_PATTERN
+        pen.set_dash(@dash_pattern, @dash_phase) end
+      if @stroke_color != DEFAULT_STROKE_COLOR
+        pen.set_stroke_color(@stroke_color) end
+      if @fill_color != DEFAULT_FILL_COLOR
+        pen.set_fill_color(@fill_color) end
 
       block.call(pen)
     end

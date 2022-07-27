@@ -126,8 +126,8 @@ class PdfImage
 
     def paint(image, x: 0, y: 0)
       @content.stack_graphic_state do
-        # 画像を出力すると、1pt x 1ptの矩形に出力される
-        # 1pt = 1/72inなので、72dpi(=72px/in)のとき1px = 1/72in = 1pt
+        # 画像を出力すると1pt x 1ptの矩形に出力される
+        # 1pt = 1/72inなので72dpi(=72px/in)のとき1px = 1/72in = 1pt
         # なので72dpiならwidth x heightに伸ばすといい
         # 解像度が違う場合はさらに72/dpi倍すると長さがあう
         dpi = @dpi || image.dpi # 指定がなければ画像のdpiを使う
@@ -148,7 +148,8 @@ class PdfImage
         x += x_offset
         y += y_offset
 
-        @content.add_operation "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
+        @content.add_operation \
+          "#{x_scale} 0. 0. #{y_scale} #{x} #{y} cm"
         @content.add_operation "#{image.id.to_sym.serialize} Do"
       end
     end

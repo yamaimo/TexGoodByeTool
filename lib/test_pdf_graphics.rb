@@ -26,10 +26,13 @@ page.add_content do |content|
   # 矩形、楕円の出力
   graphic = PdfGraphic.new
   graphic.write_in(content) do |pen|
-    basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm], [5.cm, 17.cm])
+    basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm],
+                                           [5.cm, 17.cm])
     pen.stroke basic_rect
 
-    round_rect = PdfGraphic::Rectangle.new([6.cm, 19.cm], [8.cm, 17.cm], round: 3.mm)
+    round_rect = PdfGraphic::Rectangle.new([6.cm, 19.cm],
+                                           [8.cm, 17.cm],
+                                           round: 3.mm)
     pen.stroke round_rect
 
     oval = PdfGraphic::Oval.new([2.cm, 16.cm], [5.cm, 14.cm])
@@ -129,7 +132,8 @@ page.add_content do |content|
   end
 
   # 雪だるま
-  draw_snowman content, [3.5.cm, 12.cm], 3.cm, 0, PdfColor::Rgb.new(red: 1.0)
+  red = PdfColor::Rgb.new red: 1.0
+  draw_snowman content, [3.5.cm, 12.cm], 3.cm, 0, red
 
   # 雪だるま（回転）
   7.times do |t|
@@ -147,7 +151,8 @@ page.add_content do |content|
   graphic = PdfGraphic.new
   graphic.fill_color = PdfColor::Rgb.new green: 1, blue: 1
   graphic.write_in(content) do |pen|
-    basic_rect = PdfGraphic::Rectangle.new([9.cm, 19.cm], [13.cm, 14.cm])
+    basic_rect = PdfGraphic::Rectangle.new([9.cm, 19.cm],
+                                           [13.cm, 14.cm])
     pen.fill basic_rect
   end
 
@@ -155,7 +160,8 @@ page.add_content do |content|
   image = PdfImage.new
   image.dpi = 350
   image.write_in(content) do |pen|
-    from_px_to_pt = 72.0 / 350  # 1in = 350px, 1in = 72pt, => 72/350 [pt/px]
+    # 1in = 350px, 1in = 72pt, => 72/350 [pt/px]
+    from_px_to_pt = 72.0 / 350
     x = 11.cm - (snowman_png.width * from_px_to_pt) / 2
     y = 16.5.cm + (snowman_png.height * from_px_to_pt) / 2
     pen.paint snowman_png, x: x, y: y
