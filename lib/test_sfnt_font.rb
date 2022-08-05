@@ -29,7 +29,7 @@ puts "script     : #{font.script?}"
 ["ABCDE", "あいうえお", "斉斎齊齋"].each do |str|
   cids = str.unpack('U*')
   gids = font.convert_to_gid(str)
-  widths = gids.map{|gid| font.widths[gid]}
+  widths = gids.map{|gid| font.get_width(gid)}
   puts "string: #{str}"
   puts "  cid  : #{cids}"
   puts "  gid  : #{gids}"

@@ -42,7 +42,7 @@ if __FILE__ == $0
 
   char = 'あ'
   gid = sfnt_font.convert_to_gid(char).first
-  width = sfnt_font.widths[gid] * font_size / 1000.0
+  width = sfnt_font.get_width(gid) * font_size / 1000.0
   ascender = sfnt_font.ascender * font_size / 1000.0
   descender = sfnt_font.descender * font_size / 1000.0
 

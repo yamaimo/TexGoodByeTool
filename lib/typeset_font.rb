@@ -21,7 +21,7 @@ class TypesetFont
 
   def get_typeset_char(char)
     gid = @sfnt_font.convert_to_gid(char).first
-    width = @sfnt_font.widths[gid] * @size / 1000.0
+    width = @sfnt_font.get_width(gid) * @size / 1000.0
     ascender = @sfnt_font.ascender * @size / 1000.0
     descender = @sfnt_font.descender * @size / 1000.0
     TypesetChar.new(char, gid, width, ascender, descender)

@@ -138,6 +138,6 @@ if __FILE__ == $0
     puts "string: #{str}"
     puts "  unicode: #{str.unpack('U*')}"
     puts "  glyph  : #{font.convert_to_gid(str)}"
-    puts "  width  : #{font.convert_to_gid(str).map{|gid| font.widths[gid]}}"
+    puts "  width  : #{font.convert_to_gid(str).map{|gid| font.get_width(gid)}}"
   end
 end
