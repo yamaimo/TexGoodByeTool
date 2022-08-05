@@ -108,7 +108,7 @@ class SfntFont
 
   def_delegators :@cmap, :gid_cache, :convert_to_gid, :find_gid
 
-  def_delegators :@hmtx, :widths, :mode_width
+  def_delegators :@hmtx, :widths, :mode_width, :get_width
 
   def id
     "Font#{self.object_id}"
@@ -208,6 +208,6 @@ if __FILE__ == $0
     puts "string: #{str}"
     puts "  unicode: #{str.unpack('U*')}"
     puts "  glyph  : #{font.convert_to_gid(str)}"
-    puts "  width  : #{font.convert_to_gid(str).map{|gid| font.widths[gid]}}"
+    puts "  width  : #{font.convert_to_gid(str).map{|gid| font.get_width(gid)}}"
   end
 end
