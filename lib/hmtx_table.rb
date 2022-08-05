@@ -30,6 +30,10 @@ class HmtxTable
 
   attr_reader :widths, :mode_width
 
+  def get_width(gid)
+    (gid < @widths.size) ? @widths[gid] : @widths[-1]
+  end
+
 end
 
 if __FILE__ == $0
