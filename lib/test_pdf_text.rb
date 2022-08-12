@@ -15,7 +15,8 @@ if ARGV.empty?
   puts "[Font collection file list] ----------"
   SfntFontCollection.list.each do |filename|
     puts filename
-    SfntFontCollection.list_collection(filename).each_with_index do |name, i|
+    collections = SfntFontCollection.list_collection(filename)
+    collections.each_with_index do |name, i|
       puts "[#{i}] #{name}"
     end
   end
