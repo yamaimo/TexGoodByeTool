@@ -45,6 +45,19 @@ document.author = "やまいも"
 pdf_font = PdfFont.new(sfnt_font)
 document.add_font(pdf_font)
 
+# TeXの出力
+def put_tex(pen, fontsize)
+  # base/plain.tex:
+  # \def\TeX{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
+  pen.putc char: 'T'
+  pen.put_space -0.1667
+  pen.set_text_rise(-fontsize * 0.5 * 0.5)
+  pen.putc char: 'E'
+  pen.set_text_rise 0
+  pen.put_space -0.125
+  pen.putc char: 'X'
+end
+
 page = PdfPage.add_to(document)
 page.add_content do |content|
   content.stack_graphic_state do
@@ -65,20 +78,25 @@ page.add_content do |content|
       pen.puts
 
       # TeXの出力
-      def put_tex(pen, fontsize)
-        # base/plain.tex:
-        # \def\TeX{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
-        pen.putc char: 'T'
-        pen.put_space -0.1667
-        pen.set_text_rise(-fontsize * 0.5 * 0.5)
-        pen.putc char: 'E'
-        pen.set_text_rise 0
-        pen.put_space -0.125
-        pen.putc char: 'X'
-      end
-
       put_tex(pen, 14)
       pen.puts "グッバイしたい！"
+    end
+  end
+
+  content.stack_graphic_state do
+    content.move_origin 22.mm, 128.mm
+
+    # レンダリングモードを変えて出力
+    text = PdfText.new(pdf_font, 48)
+    text.leading = 56
+    text.rendering_mode = PdfText::RenderingMode::FILL_STROKE
+    text.line_width = 1.5
+    text.stroke_color = PdfColor::Rgb.new red: 1.0
+    text.fill_color = PdfColor::Rgb.new red: 1.0, green: 1.0
+    text.write_in(content) do |pen|
+      put_tex(pen, 48)
+      pen.puts "グッバイ"
+      pen.puts "したい！"
     end
   end
 end
