@@ -40,7 +40,6 @@ sfnt_font = if ARGV.size == 1
               SfntFontCollection.load(filename, index)
             end
 
-
 using LengthExtension
 
 # A5
@@ -172,10 +171,13 @@ page.add_content do |content|
   # 矩形、楕円の出力
   graphic = PdfGraphic.new
   graphic.write_in(content) do |pen|
-    basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm], [5.cm, 17.cm])
+    basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm],
+                                           [5.cm, 17.cm])
     pen.stroke basic_rect
 
-    round_rect = PdfGraphic::Rectangle.new([6.cm, 19.cm], [8.cm, 17.cm], round: 3.mm)
+    round_rect = PdfGraphic::Rectangle.new([6.cm, 19.cm],
+                                           [8.cm, 17.cm],
+                                           round: 3.mm)
     pen.stroke round_rect
 
     oval = PdfGraphic::Oval.new([2.cm, 16.cm], [5.cm, 14.cm])
@@ -186,7 +188,8 @@ page.add_content do |content|
   end
 
   # 雪だるまの出力
-  draw_snowman content, [3.5.cm, 12.cm], 3.cm, 0, PdfColor::Rgb.new(red: 1.0)
+  red = PdfColor::Rgb.new red: 1.0
+  draw_snowman content, [3.5.cm, 12.cm], 3.cm, 0, red
 
   # 雪だるまを回転させて出力
   7.times do |t|
@@ -201,9 +204,12 @@ page.add_content do |content|
   end
 end
 
-document.add_destination("Page1", PdfDestination.new(page, 0.mm, 210.mm))
-document.add_destination("矩形", PdfDestination.new(page, 2.cm, 19.cm))
-document.add_destination("雪だるま", PdfDestination.new(page, 2.cm, 13.5.cm))
+document.add_destination(
+  "Page1", PdfDestination.new(page, 0.mm, 210.mm))
+document.add_destination(
+  "矩形", PdfDestination.new(page, 2.cm, 19.cm))
+document.add_destination(
+  "雪だるま", PdfDestination.new(page, 2.cm, 13.5.cm))
 
 # PNG画像の出力
 
@@ -213,7 +219,8 @@ page.add_content do |content|
   graphic = PdfGraphic.new
   graphic.fill_color = PdfColor::Rgb.new green: 1, blue: 1
   graphic.write_in(content) do |pen|
-    basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm], [6.cm, 14.cm])
+    basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm],
+                                           [6.cm, 14.cm])
     pen.fill basic_rect
   end
 
@@ -226,8 +233,11 @@ page.add_content do |content|
   end
 end
 
-document.add_destination("Page2", PdfDestination.new(page, 0.mm, 210.mm))
-document.add_destination("雪だるま（PNG画像）", PdfDestination.new(page, 2.cm, 19.cm))
+document.add_destination(
+  "Page2", PdfDestination.new(page, 0.mm, 210.mm))
+document.add_destination(
+  "雪だるま（PNG画像）",
+  PdfDestination.new(page, 2.cm, 19.cm))
 
 # テキストの出力
 
@@ -274,9 +284,14 @@ page.add_content do |content|
   end
 end
 
-document.add_destination("Page3", PdfDestination.new(page, 0.mm, 210.mm))
-document.add_destination("テキスト", PdfDestination.new(page, 22.mm, 188.mm + 14.pt))
-document.add_destination("TeXグッバイ（大）", PdfDestination.new(page, 22.mm, 128.mm + 48.pt))
+document.add_destination(
+  "Page3", PdfDestination.new(page, 0.mm, 210.mm))
+document.add_destination(
+  "テキスト",
+  PdfDestination.new(page, 22.mm, 188.mm + 14.pt))
+document.add_destination(
+  "TeXグッバイ（大）",
+  PdfDestination.new(page, 22.mm, 128.mm + 48.pt))
 
 # リンクの出力
 
@@ -310,7 +325,7 @@ page.add_content do |content|
         page.add_link(
           PdfInternalLink.new(
             dest,
-            [22.mm, y_offset, 22.mm + width, y_offset + 14.pt],
+            [22.mm, y_offset, 22.mm+width, y_offset+14.pt],
             dest))
         y_offset -= 16.pt
       end
@@ -329,7 +344,8 @@ page.add_content do |content|
         {name: "Yahoo",
          uri: URI.parse("https://www.yahoo.co.jp/")},
         {name: "TeXグッバイ本",
-         uri: URI.parse("https://www.yamaimo.dev/entry/TexGoodBye1")},
+         uri: URI.parse("https://www.yamaimo.dev/" +
+                        "entry/TexGoodBye1")},
       ]
       y_offset = 188.mm
       links.each do |link|
@@ -338,7 +354,7 @@ page.add_content do |content|
         page.add_link(
           PdfExternalLink.new(
             link[:uri],
-            [92.mm, y_offset, 92.mm + width, y_offset + 14.pt],
+            [92.mm, y_offset, 92.mm+width, y_offset+14.pt],
             link[:name]))
         y_offset -= 16.pt
       end
@@ -346,7 +362,8 @@ page.add_content do |content|
   end
 end
 
-document.add_destination("Page4", PdfDestination.new(page, 0.mm, 210.mm))
+document.add_destination(
+  "Page4", PdfDestination.new(page, 0.mm, 210.mm))
 
 # アウトラインの設定
 
@@ -355,11 +372,13 @@ PdfOutlineItem.add_to(page1_outline, "矩形", "矩形")
 PdfOutlineItem.add_to(page1_outline, "雪だるま", "雪だるま")
 
 page2_outline = PdfOutlineItem.add_to(document, "ページ2", "Page2")
-PdfOutlineItem.add_to(page2_outline, "雪だるま（PNG画像）", "雪だるま（PNG画像）")
+PdfOutlineItem.add_to(
+  page2_outline, "雪だるま（PNG画像）", "雪だるま（PNG画像）")
 
 page3_outline = PdfOutlineItem.add_to(document, "ページ3", "Page3")
 PdfOutlineItem.add_to(page3_outline, "テキスト", "テキスト")
-PdfOutlineItem.add_to(page3_outline, "TeXグッバイ（大）", "TeXグッバイ（大）")
+PdfOutlineItem.add_to(
+  page3_outline, "TeXグッバイ（大）", "TeXグッバイ（大）")
 
 PdfOutlineItem.add_to(document, "ページ4", "Page4")
 
