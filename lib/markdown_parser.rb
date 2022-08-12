@@ -130,7 +130,10 @@ class MarkdownParser
   end
 
   def html_to_dom(html)
-    dom = Ox.load(html, skip: :skip_none)  # 改行や空白をスキップしない
+    dom = Ox.load(
+      html,
+      skip: :skip_none,   # 改行や空白をスキップしない
+      effort: :tolerant)  # 閉じタグがなくてもOKにする
   end
 
   def setup_dom_handler

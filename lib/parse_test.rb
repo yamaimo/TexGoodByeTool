@@ -31,6 +31,8 @@ markdown = <<~END_OF_MARKDOWN
   あと、改行の扱いを確認する。
   それと`code`も。
 
+  ![雪だるま](christmas_snowman.png)
+
   ```
   # Rubyのコードの例
 
@@ -122,9 +124,16 @@ puts "=============================="
 # Ox.loadならオプションを渡せるので、こっちを使うと良さそう
 # skip: :skip_noneはブロック内の改行や空白をそのままにしてくれる
 # skip: :skip_offだとブロック間の改行や空白もそのままにするので、都合悪い
+#
+# メモ5
+# <img>タグが綴じられてなかったのでxmlとしてエラーが発生した。
+# Ox.loadでオプションとしてeffort: :tolerantを指定したらOKになった。
 
 html_body = "<body>#{html}</body>"
-dom = Ox.load(html_body, skip: :skip_none)  # 改行や空白をスキップしない
+dom = Ox.load(
+  html_body,
+  skip: :skip_none,   # 改行や空白をスキップしない
+  effort: :tolerant)  # 閉じタグがなくてもOKにする
 
 def render_node(node, level)
   indent = " " * level
