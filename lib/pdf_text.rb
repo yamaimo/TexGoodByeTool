@@ -31,9 +31,11 @@ class PdfText
     end
 
     def set_font(pdf_font, size)
-      # NOTE: 今はここでpdf_fontに必要とされる機能がsfnt_fontと等しいので、
-      # sfnt_fontも指定可能（本来はpdf_fontのみが指定されるべき）
-      @content.add_operation "#{pdf_font.id.to_sym.serialize} #{size} Tf"
+      # NOTE: 今はここでpdf_fontに必要とされる機能が
+      # sfnt_fontと等しいので、sfnt_fontも指定可能
+      # （本来はpdf_fontのみが指定されるべき）
+      @content.add_operation \
+        "#{pdf_font.id.to_sym.serialize} #{size} Tf"
       @font = pdf_font
     end
 
@@ -85,7 +87,8 @@ class PdfText
     end
 
     # カーソルを行頭に戻す
-    # dx, dyが指定されていた場合、指定された分だけ行頭の位置を変更する
+    # dx, dyが指定されていた場合、
+    # 指定された分だけ行頭の位置を変更する
     def return_cursor(dx: 0, dy: 0)
       @content.add_operation "#{dx} #{dy} Td"
     end
@@ -104,7 +107,8 @@ class PdfText
   end
 
   attr_accessor :font, :size, :leading, :text_rise
-  attr_accessor :rendering_mode, :line_width, :stroke_color, :fill_color
+  attr_accessor :rendering_mode, :line_width
+  attr_accessor :stroke_color, :fill_color
 
   def write_in(content, &block)
     content.stack_graphic_state do
@@ -112,13 +116,21 @@ class PdfText
 
       content.add_operation "BT"
 
-      pen.set_font(@font, @size) if @font # FIXME: 本来@fontはnilでないべき
-      pen.set_leading(@leading) if @leading != DEFAULT_LEADING
-      pen.set_text_rise(@text_rise) if @text_rise != DEFAULT_TEXT_RISE
-      pen.set_rendering_mode(@rendering_mode) if @rendering_mode != DEFAULT_RENDERING_MODE
-      pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
-      pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
-      pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
+      # 本来は後置ifでOK（折り返しの都合）
+      if @font  # FIXME: 本来@fontはnilでないべき
+        pen.set_font(@font, @size) end
+      if @leading != DEFAULT_LEADING
+        pen.set_leading(@leading) end
+      if @text_rise != DEFAULT_TEXT_RISE
+        pen.set_text_rise(@text_rise) end
+      if @rendering_mode != DEFAULT_RENDERING_MODE
+        pen.set_rendering_mode(@rendering_mode) end
+      if @line_width != DEFAULT_LINE_WIDTH
+        pen.set_line_width(@line_width) end
+      if @stroke_color != DEFAULT_STROKE_COLOR
+        pen.set_stroke_color(@stroke_color) end
+      if @fill_color != DEFAULT_FILL_COLOR
+        pen.set_fill_color(@fill_color) end
 
       block.call(pen)
 

@@ -95,10 +95,12 @@ class PdfFont
       flags |= 0x40 if @sfnt_font.italic?
       # AllCap, SmallCap, ForceBoldはとれない
 
-      # CapHeightは可能ならOS/2テーブルからとった方がいいがascenderの値で代用
+      # CapHeightは可能ならOS/2テーブルからとった方がいいが
+      # ascenderの値で代用
       cap_height = @sfnt_font.ascender
 
-      # StemVは適切な値をとるのが難しいので太さを適当な大きさにしておく
+      # StemVは適切な値をとるのが難しいので
+      # 太さを適当な大きさにしておく
       stem_v = @sfnt_font.weight / 5
 
       font_desc_dict = {
@@ -168,7 +170,9 @@ class PdfFont
     end
 
     def attach_to(binder)
-      entry = @sfnt_font.gid_cache.filter{|cid, gid| gid != CmapTable::GID_NOT_FOUND}
+      entry = @sfnt_font.gid_cache.filter do |cid, gid|
+        gid != CmapTable::GID_NOT_FOUND
+      end
       gid_to_cid_map = entry.map do |cid, gid|
         gid_hex_str = gid.to_hex_str
         cid_utf16be_hex_str = cid.to_utf16be_hex_str
