@@ -122,7 +122,7 @@ vol.2 PDFのはなし
     - depend: `hex_extension`
     - depend: `pdf_color`
     - depend: `pdf_serialize_extension`
-- `test_pdf_output.rb` (要分割)
+- `test_pdf_text.rb`
 
 6章 アウトラインとリンク
 ------------------------
