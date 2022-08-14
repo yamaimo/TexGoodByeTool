@@ -80,7 +80,7 @@ Jinja-likeなマクロを使える。
 
 ```
 ==========
-\{# 関数empty_lineはmacro.pyで定義 #}
+\{# 関数empty_lineはmacro.rbで定義 #}
 \{{ empty_line 3 }}
 ==========
 ```
@@ -88,7 +88,7 @@ Jinja-likeなマクロを使える。
 (出力例)
 
 \==========
-{# 関数empty_lineはmacro.pyで定義 #}
+{# 関数empty_lineはmacro.rbで定義 #}
 {{ empty_line 3 }}
 \==========
 
@@ -126,3 +126,13 @@ tool/ディレクトリでツールのリポジトリから使いたいコミッ
 原稿のリポジトリで参照しているコミットとtool/のコミットがズレてるとき、
 原稿のリポジトリで`git submodule update`をすれば、
 原稿のリポジトリが参照しているコミットの内容になる。
+
+その他
+------
+
+リポジトリに含まれる以下の雪だるまの画像は「いらすとや」さんのもので、
+著作権は「みふねたかし」氏にあります。
+
+![雪だるま](lib/christmas_snowman.png)
+
+https://www.irasutoya.com/2012/10/blog-post_22.html

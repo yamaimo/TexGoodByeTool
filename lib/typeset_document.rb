@@ -17,6 +17,7 @@ class TypesetDocument
     @height = height
     @pages = []
     @fonts = Set.new
+    @images = Set.new
   end
 
   attr_reader :width, :height
@@ -43,12 +44,20 @@ class TypesetDocument
     @fonts.add(sfnt_font)
   end
 
+  def add_image(pdf_image)
+    @images.add(pdf_image)
+  end
+
   def to_pdf_document
     pdf_document = PdfDocument.new(@width, @height)
 
     @fonts.each do |font|
       pdf_font = PdfFont.new(font)
       pdf_document.add_font(pdf_font)
+    end
+
+    @images.each do |image|
+      pdf_document.add_image(image)
     end
 
     @pages.each do |page|

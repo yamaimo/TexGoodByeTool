@@ -17,6 +17,7 @@ require_relative 'block_node_style'
 require_relative 'block_node_handler'
 require_relative 'inline_node_style'
 require_relative 'inline_node_handler'
+require_relative 'image_node_handler'
 require_relative 'text_handler'
 
 class MarkdownParser
@@ -130,7 +131,10 @@ class MarkdownParser
   end
 
   def html_to_dom(html)
-    dom = Ox.load(html, skip: :skip_none)  # 改行や空白をスキップしない
+    dom = Ox.load(
+      html,
+      skip: :skip_none,   # 改行や空白をスキップしない
+      effort: :tolerant)  # 閉じタグがなくてもOKにする
   end
 
   def setup_dom_handler
@@ -151,6 +155,9 @@ class MarkdownParser
       style = get_inline_node_style(tag, inline)
       InlineNodeHandler.add_to(dom_handler, tag, style)
     end
+
+    # 画像
+    ImageNodeHandler.add_to(dom_handler)
 
     # テキスト
     TextHandler.add_to(dom_handler)
