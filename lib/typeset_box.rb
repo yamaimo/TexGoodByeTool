@@ -3,6 +3,7 @@
 require 'forwardable'
 
 require_relative 'typeset_line'
+require_relative 'typeset_image_line'
 require_relative 'pdf_text'
 
 class TypesetBox
@@ -37,6 +38,12 @@ class TypesetBox
     line
   end
 
+  def new_image_line(pdf_image)
+    image_line = TypesetImageLine.new(pdf_image)
+    @lines.push image_line
+    image_line
+  end
+
   def current_line
     @lines[-1]
   end
@@ -44,6 +51,12 @@ class TypesetBox
   def_delegators :@lines, :push, :pop, :unshift, :shift, :empty?
 
   def write_to(content)
+    # FIXME: 暫定的にはimage lineは段落に1つのみ
+    if (@lines.size == 1) && @lines[0].is_a?(TypesetImageLine)
+      @lines[0].write_to content
+      return
+    end
+
     # FIXME: PdfTextを作るのはフォントが定まるもっと内側でやるべき
     text = PdfText.new(nil, 0)
     text.write_in(content) do |pen|

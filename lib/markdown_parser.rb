@@ -17,6 +17,7 @@ require_relative 'block_node_style'
 require_relative 'block_node_handler'
 require_relative 'inline_node_style'
 require_relative 'inline_node_handler'
+require_relative 'image_node_handler'
 require_relative 'text_handler'
 
 class MarkdownParser
@@ -154,6 +155,9 @@ class MarkdownParser
       style = get_inline_node_style(tag, inline)
       InlineNodeHandler.add_to(dom_handler, tag, style)
     end
+
+    # 画像
+    ImageNodeHandler.add_to(dom_handler)
 
     # テキスト
     TextHandler.add_to(dom_handler)
