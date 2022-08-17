@@ -236,9 +236,9 @@ page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 22.mm, 188.mm
 
-    text = PdfText.new(pdf_font, 14)
-    text.leading = 16
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 14)
+    text_setting.leading = 16
+    text_setting.get_pen_for(content) do |pen|
       # 文字の出力
       strs = [
         "ABCDE", "あいうえお", "斉斎齊齋",
@@ -260,13 +260,13 @@ page.add_content do |content|
     content.move_origin 22.mm, 128.mm
 
     # レンダリングモードを変えて出力
-    text = PdfText.new(pdf_font, 48)
-    text.leading = 56
-    text.rendering_mode = PdfText::RenderingMode::FILL_STROKE
-    text.line_width = 1.5
-    text.stroke_color = PdfColor::Rgb.new red: 1.0
-    text.fill_color = PdfColor::Rgb.new red: 1.0, green: 1.0
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 48)
+    text_setting.leading = 56
+    text_setting.rendering_mode = PdfText::RenderingMode::FILL_STROKE
+    text_setting.line_width = 1.5
+    text_setting.stroke_color = PdfColor::Rgb.new red: 1.0
+    text_setting.fill_color = PdfColor::Rgb.new red: 1.0, green: 1.0
+    text_setting.get_pen_for(content) do |pen|
       put_tex(pen, 48)
       pen.puts "グッバイ"
       pen.puts "したい！"
@@ -293,10 +293,10 @@ page.add_content do |content|
     content.move_origin 22.mm, 188.mm
 
     # 内部リンク
-    text = PdfText.new(pdf_font, 14)
-    text.leading = 16
-    text.fill_color = PdfColor::Rgb.new blue: 1.0
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 14)
+    text_setting.leading = 16
+    text_setting.fill_color = PdfColor::Rgb.new blue: 1.0
+    text_setting.get_pen_for(content) do |pen|
       dests = [
         "Page1", "矩形", "雪だるま",
         "Page2", "雪だるま（PNG画像）",
@@ -321,10 +321,10 @@ page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 92.mm, 188.mm
 
-    text = PdfText.new(pdf_font, 14)
-    text.leading = 16
-    text.fill_color = PdfColor::Rgb.new blue: 1.0
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 14)
+    text_setting.leading = 16
+    text_setting.fill_color = PdfColor::Rgb.new blue: 1.0
+    text_setting.get_pen_for(content) do |pen|
       links = [
         {name: "Yahoo",
          uri: URI.parse("https://www.yahoo.co.jp/")},
