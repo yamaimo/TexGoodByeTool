@@ -23,9 +23,9 @@ document.add_image(snowman_png)
 page = PdfPage.add_to(document)
 page.add_content do |content|
   # PNG画像の背景（マスクの確認用）
-  graphic = PdfGraphic.new
-  graphic.fill_color = PdfColor::Rgb.new green: 1, blue: 1
-  graphic.write_in(content) do |pen|
+  graphic_setting = PdfGraphic::Setting.new
+  graphic_setting.fill_color = PdfColor::Rgb.new green: 1, blue: 1
+  graphic_setting.get_pen_for(content) do |pen|
     basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm], [6.cm, 14.cm])
     pen.fill basic_rect
   end
