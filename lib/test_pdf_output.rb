@@ -218,10 +218,10 @@ page.add_content do |content|
   end
 
   # 雪だるまのPNG画像
-  image = PdfImage.new
-  image.anchor = PdfImage::Anchor::CENTER
-  image.dpi = 350
-  image.write_in(content) do |pen|
+  image_setting = PdfImage::Setting.new
+  image_setting.anchor = PdfImage::Anchor::CENTER
+  image_setting.dpi = 350
+  image_setting.get_pen_for(content) do |pen|
     pen.paint snowman_png, x: 4.cm, y: 16.5.cm
   end
 end
