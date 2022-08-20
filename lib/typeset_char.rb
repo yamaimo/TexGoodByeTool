@@ -1,20 +1,20 @@
-# 組版文字
+# 組版オブジェクト：文字
 
 class TypesetChar
 
-  def initialize(char, gid, width, ascender, descender)
+  def self.create(char, font, size)
+    gid = font.convert_to_gid(char).first
+    width = font.get_width(gid) * size / 1000.0
+    self.new(char, gid, width)
+  end
+
+  def initialize(char, gid, width)
     @char = char
     @gid = gid
     @width = width
-    @ascender = ascender
-    @descender = descender
   end
 
-  attr_reader :gid, :width, :ascender, :descender
-
-  def height
-    @ascender - @descender
-  end
+  attr_reader :gid, :width
 
   def write_with(pen)
     pen.putc(gid: @gid)
@@ -38,35 +38,26 @@ if __FILE__ == $0
   using LengthExtension
 
   sfnt_font = SfntFont.load('ipaexm.ttf')
+  pdf_font = PdfFont.new(sfnt_font)
   font_size = 14
 
-  char = 'あ'
-  gid = sfnt_font.convert_to_gid(char).first
-  width = sfnt_font.get_width(gid) * font_size / 1000.0
-  ascender = sfnt_font.ascender * font_size / 1000.0
-  descender = sfnt_font.descender * font_size / 1000.0
-
-  typeset_char = TypesetChar.new('あ', gid, width, ascender, descender)
+  typeset_char = TypesetChar.create('あ', pdf_font, font_size)
   puts "char     : #{typeset_char}"
   puts "gid      : #{typeset_char.gid}"
   puts "width    : #{typeset_char.width}"
-  puts "height   : #{typeset_char.height}"
-  puts "ascender : #{typeset_char.ascender}"
-  puts "descender: #{typeset_char.descender}"
 
   # A5
   page_width = 148.mm
   page_height = 210.mm
   document = PdfDocument.new(page_width, page_height)
 
-  pdf_font = PdfFont.new(sfnt_font)
   document.add_font(pdf_font)
+  text_setting = PdfText::Setting.new(pdf_font, font_size)
 
   page = PdfPage.add_to(document)
   page.add_content do |content|
     content.move_origin 22.mm, 188.mm
-    text = PdfText.new(pdf_font, font_size)
-    text.write_in(content) do |pen|
+    text_setting.get_pen_for(content) do |pen|
       typeset_char.write_with(pen)
     end
   end
