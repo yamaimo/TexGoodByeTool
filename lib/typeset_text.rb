@@ -41,6 +41,16 @@ class TypesetText
     @text_setting.font.descender
   end
 
+  def stretch_count
+    @stretches.size
+  end
+
+  def stretch_width=(width)
+    @stretches.each do |stretch|
+      stretch.width = width
+    end
+  end
+
   # 文字を追加し、次に文字を追加すべきテキストを返す
   def add_char(char)
     last_char = @chars.empty? ? nil : @chars[-1].to_s
@@ -90,16 +100,6 @@ class TypesetText
     end
 
     self
-  end
-
-  def stretch_count
-    @stretches.size
-  end
-
-  def stretch_width=(width)
-    @stretches.each do |stretch|
-      stretch.width = width
-    end
   end
 
   def write_to(content)
