@@ -1,5 +1,6 @@
 # 組版オブジェクト：行
 
+require_relative 'typeset_margin'
 require_relative 'text_style'
 require_relative 'typeset_inline'
 require_relative 'typeset_text'
@@ -14,10 +15,10 @@ class TypesetLine
   # FIXME:
   # 子要素間に伸縮スペースを入れるか設定で必要そう。
 
-  def initialize(parent, allocated_width = 0)
+  def initialize(parent, allocated_width)
     @parent = parent
     @allocated_width = allocated_width
-    @text_style = TextStyle.new(parent: @parent.text_style)
+    @text_style = @parent.text_style
     @allocated_width = allocated_width
     @children = []
     @next = nil
@@ -44,6 +45,10 @@ class TypesetLine
     @children.map(&:descender).min || 0
   end
 
+  def margin
+    TypesetMargin.zero
+  end
+
   def stretch_count
     @children.map(&:stretch_count).sum
   end
@@ -58,10 +63,10 @@ class TypesetLine
     @next.nil? ? self : @next.latest
   end
 
-  def new_inline(text_style)
+  def new_inline(inline_style, text_style)
     allocated_width = @allocated_width - self.width
     # FIXME: さらに子のmarginから幅を計算する必要があるが後回し
-    child = TypesetInline.new(self, text_style, allocated_width)
+    child = TypesetInline.new(self, inline_style, text_style, allocated_width)
     @children.push child
     child
   end

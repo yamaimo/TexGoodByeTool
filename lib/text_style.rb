@@ -6,26 +6,20 @@ class TextStyle
 
   # leadingはボックス側の設定 -> ここでもいいかも
   # text_rise, rendering_modeなどは後回し
-  def initialize(parent: nil, font: nil, size: nil, verbatim: nil)
-    @parent = parent
+  def initialize(font: nil, size: nil, verbatim: nil)
     @font = font
     @size = size
     @verbatim = verbatim
   end
 
-  def font
-    @font ||= @parent.font
-  end
+  attr_reader :font, :size, :verbatim
+  alias_method :verbatim?, :verbatim
 
-  def size
-    @size ||= @parent.size
-  end
-
-  def verbatim?
-    if @verbatim.nil?
-      @verbatim = @parent.verbatim?
-    end
-    @verbatim
+  def create_inherit_style(parent_style)
+    font = @font || parent_style.font
+    size = @size || parent_style.size
+    verbatim = @verbatim.nil? ? parent_style.verbatim : @verbatim
+    TextStyle.new(font: font, size: size, verbatim: verbatim)
   end
 
   def to_pdf_text_setting
@@ -54,19 +48,22 @@ if __FILE__ == $0
   puts "  size: #{parent_style.size}"
   puts "  verb: #{parent_style.verbatim?}"
 
-  child1_style = TextStyle.new(parent: parent_style, size: 14)
+  child1_style_base = TextStyle.new(size: 14)
+  child1_style = child1_style_base.create_inherit_style(parent_style)
   puts "child1:"
   puts "  font: #{child1_style.font.id}"
   puts "  size: #{child1_style.size}"
   puts "  verb: #{child1_style.verbatim?}"
 
-  child2_style = TextStyle.new(parent: parent_style, font: pdf_font_2, verbatim: true)
+  child2_style_base = TextStyle.new(font: pdf_font_2, verbatim: true)
+  child2_style = child2_style_base.create_inherit_style(parent_style)
   puts "child2:"
   puts "  font: #{child2_style.font.id}"
   puts "  size: #{child2_style.size}"
   puts "  verb: #{child2_style.verbatim?}"
 
-  child3_style = TextStyle.new(parent: child2_style, size: 10)
+  child3_style_base = TextStyle.new(size: 10)
+  child3_style = child3_style_base.create_inherit_style(child2_style)
   puts "child3:"
   puts "  font: #{child3_style.font.id}"
   puts "  size: #{child3_style.size}"

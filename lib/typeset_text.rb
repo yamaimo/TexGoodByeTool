@@ -1,5 +1,6 @@
 # 組版オブジェクト：テキスト
 
+require_relative 'typeset_margin'
 require_relative 'text_style'
 require_relative 'typeset_char'
 require_relative 'typeset_stretch_space'
@@ -14,12 +15,12 @@ class TypesetText
   RESTRICT_LAST_CHARS = " ([{<（「『\u00a0" # \u00a0はnbsp
   ALNUM_REGEXP = Regexp.new(/[a-zA-Z0-9]/)
 
-  def initialize(parent, allocated_width = 0)
-    @parent = parent  # TypesetLineもしくはTypesetInline
+  def initialize(parent, allocated_width)
+    @parent = parent
     @allocated_width = allocated_width
     @chars = []     # TypesetChar, TypesetStretchSpace
     @stretches = [] # TypesetStretchSpaceのみ
-    @text_style = TextStyle.new(parent: @parent.text_style)
+    @text_style = @parent.text_style
     @break_idx = 0  # 改行の位置
     @next = nil
   end
@@ -40,6 +41,10 @@ class TypesetText
   def descender
     # FIXME: あとでtext_riseも足す
     @text_style.font.descender
+  end
+
+  def margin
+    TypesetMargin.zero
   end
 
   def stretch_count
@@ -94,7 +99,7 @@ class TypesetText
     @chars.push typeset_char
 
     # 幅がオーバーするようだったら改行処理
-    if width > @allocated_width
+    if self.width > @allocated_width
       next_line_str = pop_next_line_str
       @next = @parent.break_line
       next_line_str.each_char do |char|

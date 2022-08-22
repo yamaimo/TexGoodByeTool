@@ -2,8 +2,8 @@
 
 class TypesetMargin
 
-  def self.zero_margin
-    @zero_margin ||= self.new
+  def self.zero
+    @zero ||= self.new
   end
 
   def initialize(top: 0, right: 0, bottom: 0, left: 0)

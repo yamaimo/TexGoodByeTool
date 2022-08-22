@@ -4,7 +4,7 @@ require_relative 'typeset_text'
 
 class TypesetInline
   # 子としてTypesetInline, TypesetText, TypesetImageを持ち、
-  # これらに#width, #ascender, #descender,
+  # これらに#width, #ascender, #descender, #margin
   # #stretch_count, #stretch_width=, #write_to(content)を要求する。
   # 親はTypesetLineもしくはTypesetInlineで、
   # これらに#text_style, #break_lineを要求する。
@@ -13,18 +13,16 @@ class TypesetInline
   # 子要素間に伸縮スペースを入れるかと、
   # 子要素間での改行を許すかは、設定で必要そう。
 
-  # FIXME:
-  # border, margin, paddingなども設定として持つが、後回し。
-
-  def initialize(parent, text_style, allocated_width = 0)
+  def initialize(parent, inline_style, text_style, allocated_width)
     @parent = parent
-    @text_style = text_style
+    @inline_style = inline_style
+    @text_style = text_style.create_inherit_style(parent.text_style)
     @allocated_width = allocated_width
     @children = []
     @next = nil
   end
 
-  attr_reader :text_style, :allocated_width
+  attr_reader :inline_style, :text_style, :allocated_width
 
   def width
     # FIXME: 自身のpadding, 子の間のmarginの計算が必要だけど後回し
@@ -45,6 +43,10 @@ class TypesetInline
     @children.map(&:descender).min || 0
   end
 
+  def margin
+    @inline_style.margin
+  end
+
   def stretch_count
     @children.map(&:stretch_count).sum
   end
@@ -59,10 +61,10 @@ class TypesetInline
     @next.nil? ? self : @next.latest
   end
 
-  def new_inline(text_style)
+  def new_inline(inline_style, text_style)
     allocated_width = @allocated_width - self.width
     # FIXME: さらに自身のpadding, 子のmarginから幅を計算する必要があるが後回し
-    child = TypesetInline.new(self, text_style, allocated_width)
+    child = TypesetInline.new(self, inline_style, text_style, allocated_width)
     @children.push child
     child
   end
@@ -87,7 +89,7 @@ class TypesetInline
     last_child = @children.last
     case last_child
     when TypesetInline
-      @next.new_inline(last_child.text_style)
+      @next.new_inline(last_child.inline_style, last_child.text_style)
     when TypesetText
       @next.new_text
     #when TypesetImage  # FIXME: not yet
@@ -120,6 +122,7 @@ if __FILE__ == $0
   require_relative 'pdf_page'
   require_relative 'pdf_text'
   require_relative 'pdf_object_binder'
+  require_relative 'inline_style'
 
   class TypesetLineMock
     def initialize(text_style, allocated_width)
@@ -145,7 +148,7 @@ if __FILE__ == $0
 
       child = case last_child
               when TypesetInline
-                TypesetInline.new(self, last_child.text_style, @allocated_width)
+                TypesetInline.new(self, last_child.inline_style, last_child.text_style, @allocated_width)
               when TypesetText
                 TypesetText.new(self, @allocated_width)
               end
@@ -167,9 +170,10 @@ if __FILE__ == $0
   font_size = 14
 
   text_style = TextStyle.new(font: pdf_font, size: font_size, verbatim: false)
+  inline_style = InlineStyle.new
 
   line = TypesetLineMock.new(text_style, 5.cm)
-  inline = TypesetInline.new(line, text_style, 5.cm)
+  inline = TypesetInline.new(line, inline_style, text_style, 5.cm)
   line.add_child(inline)
 
   script = <<~END_OF_SCRIPT
