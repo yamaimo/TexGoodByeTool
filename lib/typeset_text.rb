@@ -1,6 +1,6 @@
 # 組版オブジェクト：テキスト
 
-require_relative 'text_setting'
+require_relative 'text_style'
 require_relative 'typeset_char'
 require_relative 'typeset_stretch_space'
 
@@ -8,7 +8,7 @@ class TypesetText
   # 子としてTypesetChar, TypesetStretchSpaceを持ち、
   # これらに#write_with(pen)を要求する。
   # 親はTypesetLineもしくはTypesetInlineで、
-  # これらに#text_setting, #break_lineを要求する。
+  # これらに#text_style, #break_lineを要求する。
 
   RESTRICT_FIRST_CHARS = ")]}>,.;:!?）」』、。；：！？ぁぃぅぇぉっゃゅょァィゥェォッャュョ\u00a0"
   RESTRICT_LAST_CHARS = " ([{<（「『\u00a0" # \u00a0はnbsp
@@ -19,8 +19,9 @@ class TypesetText
     @allocated_width = allocated_width
     @chars = []     # TypesetChar, TypesetStretchSpace
     @stretches = [] # TypesetStretchSpaceのみ
-    @text_setting = TextSetting.new(parent: @parent.text_setting)
+    @text_style = TextStyle.new(parent: @parent.text_style)
     @break_idx = 0  # 改行の位置
+    @next = nil
   end
 
   def width
@@ -33,12 +34,12 @@ class TypesetText
 
   def ascender
     # FIXME: あとでtext_riseも足す
-    @text_setting.font.ascender
+    @text_style.font.ascender
   end
 
   def descender
     # FIXME: あとでtext_riseも足す
-    @text_setting.font.descender
+    @text_style.font.descender
   end
 
   def stretch_count
@@ -51,7 +52,10 @@ class TypesetText
     end
   end
 
-  # 文字を追加し、次に文字を追加すべきテキストを返す
+  def latest
+    @next.nil? ? self : @next.latest
+  end
+
   def add_char(char)
     last_char = @chars.empty? ? nil : @chars[-1].to_s
 
@@ -61,14 +65,14 @@ class TypesetText
     #    a. 直前が英数字なら改行のかわりに半角スペースを追加
     #    b. そうでなければ何もせずに終了
     if char == "\n"
-      if @text_setting.verbatim?
-        new_text = @parent.break_line
-        return new_text
+      if @text_style.verbatim?
+        @next = @parent.break_line
+        return
       else
         if replace_lf_to_space?(last_char)
           char = " "
         else
-          return self
+          return
         end
       end
     end
@@ -80,32 +84,29 @@ class TypesetText
 
     # 伸縮スペースが必要なら先に追加しておく
     if add_stretch?(last_char, char)
-      stretch = TypesetStretchSpace.new(@text_setting.size)
+      stretch = TypesetStretchSpace.new(@text_style.size)
       @chars.push stretch
       @stretches.push stretch
     end
 
     # 組版文字を作って追加する
-    typeset_char = TypesetChar.create(char, @text_setting.font, @text_setting.size)
+    typeset_char = TypesetChar.create(char, @text_style.font, @text_style.size)
     @chars.push typeset_char
 
     # 幅がオーバーするようだったら改行処理
     if width > @allocated_width
       next_line_str = pop_next_line_str
-      new_text = @parent.break_line
+      @next = @parent.break_line
       next_line_str.each_char do |char|
-        new_text.add_char(char)
+        @next.add_char(char)
       end
-      return new_text
     end
-
-    self
   end
 
   def write_to(content)
     content.stack_graphic_state do
-      content.move_origin 0, -@text_setting.font.ascender
-      @text_setting.to_pdf_text_setting.get_pen_for(content) do |pen|
+      content.move_origin 0, -@text_style.font.ascender
+      @text_style.to_pdf_text_setting.get_pen_for(content) do |pen|
         @chars.each do |char|
           char.write_with(pen)
         end
@@ -130,7 +131,7 @@ class TypesetText
 
   def add_stretch?(last_char, char)
     return false if last_char.nil?
-    return false if @text_setting.verbatim?
+    return false if @text_style.verbatim?
     return false if last_char.match?(ALNUM_REGEXP) && char.match?(ALNUM_REGEXP)
     return true
   end
@@ -163,17 +164,16 @@ if __FILE__ == $0
   require_relative 'pdf_page'
   require_relative 'pdf_text'
   require_relative 'pdf_object_binder'
-  require_relative 'text_setting'
 
   class TypesetLineMock
-    def initialize(parent, text_setting, allocated_width = 0)
+    def initialize(parent, text_style, allocated_width = 0)
       @parent = parent
-      @text_setting = text_setting
+      @text_style = text_style
       @allocated_width = allocated_width
       @children = []
     end
 
-    attr_reader :text_setting, :allocated_width
+    attr_reader :text_style, :allocated_width
 
     def add_child(child)
       @children.push child
@@ -181,7 +181,7 @@ if __FILE__ == $0
 
     def break_line
       # 本来は親が作って追加する
-      new_line = self.class.new(@parent, @text_setting, @allocated_width)
+      new_line = self.class.new(@parent, @text_style, @allocated_width)
       @parent.push new_line
 
       last_child = @children.last
@@ -211,10 +211,10 @@ if __FILE__ == $0
   pdf_font = PdfFont.new(sfnt_font)
   font_size = 14
 
-  text_setting = TextSetting.new(font: pdf_font, size: font_size, verbatim: false)
+  text_style = TextStyle.new(font: pdf_font, size: font_size, verbatim: false)
 
   lines = []
-  line = TypesetLineMock.new(lines, text_setting, 5.cm)
+  line = TypesetLineMock.new(lines, text_style, 5.cm)
   text = TypesetText.new(line, 5.cm)
   line.add_child(text)
 
@@ -226,7 +226,8 @@ if __FILE__ == $0
   END_OF_SCRIPT
 
   script.each_char do |char|
-    text = text.add_char(char)
+    text.add_char(char)
+    text = text.latest
   end
 
   # A5

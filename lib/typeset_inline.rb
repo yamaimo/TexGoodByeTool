@@ -7,7 +7,7 @@ class TypesetInline
   # これらに#width, #ascender, #descender,
   # #stretch_count, #stretch_width=, #write_to(content)を要求する。
   # 親はTypesetLineもしくはTypesetInlineで、
-  # これらに#text_setting, #break_lineを要求する。
+  # これらに#text_style, #break_lineを要求する。
 
   # FIXME:
   # 子要素間に伸縮スペースを入れるかと、
@@ -16,14 +16,15 @@ class TypesetInline
   # FIXME:
   # border, margin, paddingなども設定として持つが、後回し。
 
-  def initialize(parent, text_setting, allocated_width = 0)
+  def initialize(parent, text_style, allocated_width = 0)
     @parent = parent
-    @text_setting = text_setting
+    @text_style = text_style
     @allocated_width = allocated_width
     @children = []
+    @next = nil
   end
 
-  attr_reader :text_setting, :allocated_width
+  attr_reader :text_style, :allocated_width
 
   def width
     # FIXME: 自身のpadding, 子の間のmarginの計算が必要だけど後回し
@@ -54,10 +55,14 @@ class TypesetInline
     end
   end
 
-  def new_inline(text_setting)
+  def latest
+    @next.nil? ? self : @next.latest
+  end
+
+  def new_inline(text_style)
     allocated_width = @allocated_width - self.width
     # FIXME: さらに自身のpadding, 子のmarginから幅を計算する必要があるが後回し
-    child = TypesetInline.new(self, text_setting, allocated_width)
+    child = TypesetInline.new(self, text_style, allocated_width)
     @children.push child
     child
   end
@@ -75,15 +80,18 @@ class TypesetInline
   end
 
   def break_line
-    new_inline = @parent.break_line
+    @next = @parent.break_line
+
+    # FIXME: 最後の子要素が空なら取り除くとか必要かも
+
     last_child = @children.last
     case last_child
     when TypesetInline
-      new_inline.new_inline(last_child.text_setting)
+      @next.new_inline(last_child.text_style)
     when TypesetText
-      new_inline.new_text
+      @next.new_text
     #when TypesetImage  # FIXME: not yet
-      #new_inline.new_image
+      #@next.new_image
     end
   end
 
@@ -92,7 +100,7 @@ class TypesetInline
     x = 0
     @children.each do |child|
       content.stack_graphic_state do
-        # y軸は自身のascenderの位置が基準になって子のascenderの位置に原点を持っていく
+        # 自身のascenderの高さが基準で、子のascenderの高さにy軸の位置を持っていく
         child_y = child.ascender - self.ascender
         content.move_origin x, child_y
         child.write_to(content)
@@ -112,16 +120,15 @@ if __FILE__ == $0
   require_relative 'pdf_page'
   require_relative 'pdf_text'
   require_relative 'pdf_object_binder'
-  require_relative 'text_setting'
 
   class TypesetLineMock
-    def initialize(text_setting, allocated_width)
-      @text_setting = text_setting
+    def initialize(text_style, allocated_width)
+      @text_style = text_style
       @allocated_width = allocated_width
       @children = []
     end
 
-    attr_reader :text_seting, :allocated_width
+    attr_reader :text_style, :allocated_width
 
     def add_child(child)
       @children.push child
@@ -138,7 +145,7 @@ if __FILE__ == $0
 
       child = case last_child
               when TypesetInline
-                TypesetInline.new(self, last_child.text_setting, @allocated_width)
+                TypesetInline.new(self, last_child.text_style, @allocated_width)
               when TypesetText
                 TypesetText.new(self, @allocated_width)
               end
@@ -159,10 +166,10 @@ if __FILE__ == $0
   pdf_font = PdfFont.new(sfnt_font)
   font_size = 14
 
-  text_setting = TextSetting.new(font: pdf_font, size: font_size, verbatim: false)
+  text_style = TextStyle.new(font: pdf_font, size: font_size, verbatim: false)
 
-  line = TypesetLineMock.new(text_setting, 5.cm)
-  inline = TypesetInline.new(line, text_setting, 5.cm)
+  line = TypesetLineMock.new(text_style, 5.cm)
+  inline = TypesetInline.new(line, text_style, 5.cm)
   line.add_child(inline)
 
   script = <<~END_OF_SCRIPT
@@ -174,7 +181,8 @@ if __FILE__ == $0
 
   text = inline.new_text
   script.each_char do |char|
-    text = text.add_char(char)
+    text.add_char(char)
+    text = text.latest
   end
 
   # A5

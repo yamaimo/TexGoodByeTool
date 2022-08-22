@@ -1,8 +1,8 @@
-# テキスト設定
+# テキストスタイル
 
 require_relative 'pdf_text'
 
-class TextSetting
+class TextStyle
 
   # leadingはボックス側の設定 -> ここでもいいかも
   # text_rise, rendering_modeなどは後回し
@@ -48,29 +48,29 @@ if __FILE__ == $0
   sfnt_font_2 = SfntFont.load('ipaexm.ttf') # IDは別になる
   pdf_font_2 = PdfFont.new(sfnt_font_2)
 
-  parent_setting = TextSetting.new(font: pdf_font, size: 16, verbatim: false)
+  parent_style = TextStyle.new(font: pdf_font, size: 16, verbatim: false)
   puts "parent:"
-  puts "  font: #{parent_setting.font.id}"
-  puts "  size: #{parent_setting.size}"
-  puts "  verb: #{parent_setting.verbatim?}"
+  puts "  font: #{parent_style.font.id}"
+  puts "  size: #{parent_style.size}"
+  puts "  verb: #{parent_style.verbatim?}"
 
-  child1_setting = TextSetting.new(parent: parent_setting, size: 14)
+  child1_style = TextStyle.new(parent: parent_style, size: 14)
   puts "child1:"
-  puts "  font: #{child1_setting.font.id}"
-  puts "  size: #{child1_setting.size}"
-  puts "  verb: #{child1_setting.verbatim?}"
+  puts "  font: #{child1_style.font.id}"
+  puts "  size: #{child1_style.size}"
+  puts "  verb: #{child1_style.verbatim?}"
 
-  child2_setting = TextSetting.new(parent: parent_setting, font: pdf_font_2, verbatim: true)
+  child2_style = TextStyle.new(parent: parent_style, font: pdf_font_2, verbatim: true)
   puts "child2:"
-  puts "  font: #{child2_setting.font.id}"
-  puts "  size: #{child2_setting.size}"
-  puts "  verb: #{child2_setting.verbatim?}"
+  puts "  font: #{child2_style.font.id}"
+  puts "  size: #{child2_style.size}"
+  puts "  verb: #{child2_style.verbatim?}"
 
-  child3_setting = TextSetting.new(parent: child2_setting, size: 10)
+  child3_style = TextStyle.new(parent: child2_style, size: 10)
   puts "child3:"
-  puts "  font: #{child3_setting.font.id}"
-  puts "  size: #{child3_setting.size}"
-  puts "  verb: #{child3_setting.verbatim?}"
+  puts "  font: #{child3_style.font.id}"
+  puts "  size: #{child3_style.size}"
+  puts "  verb: #{child3_style.verbatim?}"
 
   using LengthExtension
 
@@ -80,7 +80,7 @@ if __FILE__ == $0
   document = PdfDocument.new(page_width, page_height)
   page = PdfPage.add_to(document)
   page.add_content do |content|
-    parent_setting.to_pdf_text_setting.get_pen_for(content) do |pen|
+    parent_style.to_pdf_text_setting.get_pen_for(content) do |pen|
       # do nothing
     end
   end
