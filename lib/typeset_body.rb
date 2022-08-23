@@ -1,21 +1,21 @@
-# 組版オブジェクト：ブロック要素
+# 組版オブジェクト：本文領域
 
+require_relative 'block_style'
+require_relative 'typeset_block'
 require_relative 'typeset_line'
 
-class TypesetBlock
+class TypesetBody
   # 子としてTypesetBlock, TypesetLineを持ち、
   # これらに#width, #height, #margin, #write_to(content)を要求する。
-  # 親はTypesetBodyもしくはTypesetBlockで、
-  # これらに#block_style, #text_style, #break_pageを要求する。
+  # 親はTypesetPageで、これに#break_pageを要求する。
 
-  def initialize(parent, block_style, text_style, allocated_width, allocated_height)
+  def initialize(parent, text_style, line_gap, allocated_width, allocated_height)
     @parent = parent
-    @block_style = block_style.create_inherit_style(parent.block_style)
-    @text_style = text_style.create_inherit_style(parent.text_style)
+    @block_style = BlockStyle.new(line_gap: line_gap)
+    @text_style = text_style
     @allocated_width = allocated_width
     @allocated_height = allocated_height
     @children = []
-    @next = nil
   end
 
   attr_reader :block_style, :text_style, :allocated_width, :allocated_height
@@ -29,14 +29,6 @@ class TypesetBlock
     # FIXME: 自身のpadding, 子の間のmarginの計算が必要だけど後回し
     # FIXME: 子が行なのかブロックなのかで行送りの計算が必要
     @children.map(&:height).sum
-  end
-
-  def margin
-    @block_style.margin
-  end
-
-  def latest
-    @next.nil? ? self : @next.latest
   end
 
   def new_block(block_style, text_style)
@@ -66,28 +58,28 @@ class TypesetBlock
     # 改ページが必要になってる場合、改ページして新しい行を返す
     # そうでない場合、単に新しい行を返す
     if self.height > @allocated_height
-      self.break_page
-      @next.new_line
+      next_body = self.break_page
+      next_body.new_line
     else
       self.new_line
     end
   end
 
   def break_page
-    @next = @parent.break_page
+    next_body = @parent.break_page
 
     # FIXME: 最後の子要素が空なら取り除くとか必要かも
 
     last_child = @children.last
     case last_child
     when TypesetBlock
-      @next.new_block(last_child.block_style, last_child.text_style)
+      next_body.new_block(last_child.block_style, last_child.text_style)
     when TypesetLine
       last_line = @children.pop
-      @next.push_line last_line
+      next_body.push_line last_line
     end
 
-    @next
+    next_body
   end
 
   def write_to(content)
@@ -116,33 +108,27 @@ if __FILE__ == $0
   require_relative 'pdf_object_binder'
   require_relative 'block_style'
 
-  class TypesetBodyMock
-    def initialize(block_style, text_style, allocated_width, allocated_height)
-      @block_style = block_style
-      @text_style = text_style
-      @allocated_width = allocated_width
-      @allocated_height = allocated_height
-      @children = []
+  class TypesetPageMock
+    def initialize(parent)
+      @parent = parent
+      @body = nil
     end
 
-    attr_reader :block_style, :text_style, :allocated_width, :allocated_height
-
-    def add_child(child)
-      @children.push child
-    end
+    attr_accessor :body
 
     def break_page
-      last_child = @children.last
-      child = TypesetBlock.new(self, last_child.block_style, last_child.text_style,
-                               @allocated_width, @allocated_height)
-      add_child(child)
-      child
+      new_page = TypesetPageMock.new(@parent)
+      @parent.push new_page
+
+      new_body = TypesetBody.new(new_page, @body.text_style, @body.block_style.line_gap,
+                                 @body.allocated_width, @body.allocated_height)
+      new_page.body = new_body
+
+      new_body
     end
 
     def write_to(content)
-      @children.each do |child|
-        child.write_to(content)
-      end
+      @body.write_to(content)
     end
   end
 
@@ -152,14 +138,16 @@ if __FILE__ == $0
   pdf_font = PdfFont.new(sfnt_font)
   font_size = 14
 
-  block_style = BlockStyle.new(line_gap: 0)
   text_style = TextStyle.new(font: pdf_font, size: font_size, verbatim: false)
 
-  body = TypesetBodyMock.new(block_style, text_style, 5.cm, 5.cm)
-  block = TypesetBlock.new(body, block_style, text_style, 5.cm, 5.cm)
-  body.add_child(block)
+  pages = []
+  page = TypesetPageMock.new(pages)
+  pages.push page
 
-  line = block.new_line
+  body = TypesetBody.new(page, text_style, 4.pt, 5.cm, 5.cm)
+  page.body = body
+
+  line = body.new_line
 
   script = <<~END_OF_SCRIPT
     二人の若い紳士が、すっかりイギリスの兵隊のかたちをして、
@@ -179,14 +167,20 @@ if __FILE__ == $0
   page_height = 210.mm
   document = PdfDocument.new(page_width, page_height)
 
-  page = PdfPage.add_to(document)
-  page.add_content do |content|
-    body.write_to(content)
+  pdf_pages = []
+  pages.each do |page|
+    pdf_page = PdfPage.add_to(document)
+    pdf_pages.push pdf_page
+    pdf_page.add_content do |content|
+      page.write_to(content)
+    end
   end
 
   binder = PdfObjectBinder.new
   # pageの内容だけ見る
-  page.attach_to(binder)
+  pdf_pages.each do |pdf_page|
+    pdf_page.attach_to(binder)
+  end
 
   binder.serialized_objects.each do |serialized_object|
     puts serialized_object
