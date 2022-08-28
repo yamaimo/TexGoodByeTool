@@ -86,8 +86,6 @@ class TypesetBlock
       last_line = @children.pop
       @next.push_line last_line
     end
-
-    @next
   end
 
   def write_to(content)

@@ -16,6 +16,7 @@ class TypesetBody
     @allocated_width = allocated_width
     @allocated_height = allocated_height
     @children = []
+    @next = nil
   end
 
   attr_reader :block_style, :text_style, :allocated_width, :allocated_height
@@ -58,28 +59,26 @@ class TypesetBody
     # 改ページが必要になってる場合、改ページして新しい行を返す
     # そうでない場合、単に新しい行を返す
     if self.height > @allocated_height
-      next_body = self.break_page
-      next_body.new_line
+      self.break_page
+      @next.new_line
     else
       self.new_line
     end
   end
 
   def break_page
-    next_body = @parent.break_page
+    @next = @parent.break_page
 
     # FIXME: 最後の子要素が空なら取り除くとか必要かも
 
     last_child = @children.last
     case last_child
     when TypesetBlock
-      next_body.new_block(last_child.block_style, last_child.text_style)
+      @next.new_block(last_child.block_style, last_child.text_style)
     when TypesetLine
       last_line = @children.pop
-      next_body.push_line last_line
+      @next.push_line last_line
     end
-
-    next_body
   end
 
   def write_to(content)
