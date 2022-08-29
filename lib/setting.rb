@@ -2,10 +2,9 @@
 
 require 'pathname'
 
-require_relative 'typeset_margin'
-require_relative 'typeset_padding'
 require_relative 'sfnt_font'
 require_relative 'sfnt_font_collection'
+require_relative 'pdf_font'
 
 class Setting
 
@@ -16,11 +15,11 @@ class Setting
       @output = nil
       @sources = []
       @macro = nil
-      @style = nil
+      @style_name = nil
     end
 
     attr_reader :output, :sources, :macro
-    attr_accessor :style
+    attr_accessor :style_name
 
     def output=(path)
       @output = Pathname.new(path)
@@ -37,7 +36,7 @@ class Setting
     def raise_if_invalid
       raise "output is not specified." if @output.nil?
       raise "no source is specified." if @sources.empty?
-      raise "style is not specified." if @style.nil?
+      raise "style is not specified." if @style_name.nil?
     end
 
   end
@@ -90,20 +89,22 @@ class Setting
     class Block
 
       def initialize
-        @font_name = DEFAULT
-        @font_size = DEFAULT
-        @line_gap = DEFAULT
         @margin = DEFAULT
         @padding = DEFAULT
+        @line_gap = DEFAULT
         @begin_new_page = false
         @indent = 0
+        @font_name = DEFAULT
+        @font_size = DEFAULT
+        @verbatim = DEFAULT
       end
 
-      attr_accessor :font_name, :font_size
-      attr_accessor :line_gap, :margin, :padding
+      attr_accessor :margin, :padding, :line_gap
       attr_accessor :begin_new_page
       alias_method :begin_new_page?, :begin_new_page
       attr_accessor :indent
+      attr_accessor :font_name, :font_size, :verbatim
+      alias_method :verbatim?, :verbatim
 
     end
 
@@ -111,14 +112,16 @@ class Setting
     class Inline
 
       def initialize
+        @margin = DEFAULT
+        @padding = DEFAULT
         @font_name = DEFAULT
-        @ignore_line_feed = true
-        # FIXME: 本来はフォントサイズ指定できるべき
-        # 指定なしの場合継承するという仕組みも必要
+        @font_size = DEFAULT
+        @verbatim = DEFAULT
       end
 
-      attr_accessor :font_name
-      attr_accessor :ignore_line_feed
+      attr_accessor :margin, :padding
+      attr_accessor :font_name, :font_size, :verbatim
+      alias_method :verbatim?, :verbatim
 
     end
 
@@ -142,20 +145,20 @@ class Setting
     def set_default
       # ブロック
       (1..6).each do |level|
-        @blocks["h#{level}"] = Block.new
+        @blocks["h#{level}".to_sym] = Block.new
       end
-      @blocks["p"] = Block.new
-      @blocks["pre"] = Block.new
+      @blocks[:p] = Block.new
+      @blocks[:pre] = Block.new
 
       # インライン
-      @inlines["em"] = Inline.new
-      @inlines["strong"] = Inline.new
-      @inlines["code"] = Inline.new
+      @inlines[:em] = Inline.new
+      @inlines[:strong] = Inline.new
+      @inlines[:code] = Inline.new
 
       # 要素ごとのデフォルトの設定
-      @blocks["h1"].begin_new_page = true
-      @blocks["p"].indent = 1
-      @inlines["code"].ignore_line_feed = false
+      @blocks[:h1].begin_new_page = true
+      @blocks[:p].indent = 1
+      @inlines[:code].verbatim = true
     end
 
   end
@@ -166,18 +169,20 @@ class Setting
     def initialize
       @file = nil
       @index = nil
-      @sfnt_font = nil
+      @pdf_font = nil
     end
 
     attr_accessor :file, :index
 
-    def sfnt_font
-      @sfnt_font ||= \
-        if @index
-          SfntFontCollection.load(@file, @index)
-        else
-          SfntFont.load(@file)
-        end
+    def pdf_font
+      @pdf_font ||= begin
+        sfnt_font = if @index
+                      SfntFontCollection.load(@file, @index)
+                    else
+                      SfntFont.load(@file)
+                    end
+        PdfFont.new(sfnt_font)
+      end
     end
 
     def raise_if_invalid
@@ -206,6 +211,8 @@ class Setting
 end
 
 if __FILE__ == $0
+  require_relative 'typeset_margin'
+  require_relative 'typeset_padding'
   require_relative 'length_extension'
 
   using LengthExtension
@@ -213,51 +220,51 @@ if __FILE__ == $0
   # 設定の作成
   setting = Setting.new
 
-  target = setting.targets["sample"] = Setting::Target.new
+  target = setting.targets[:sample] = Setting::Target.new
   target.output = "hogehuga.pdf"
   target.add_source("hoge.md")
   target.add_source("huga.md")
   target.macro = "macro.rb"
-  target.style = "normal"
+  target.style_name = :normal
 
-  target = setting.targets["readme"] = Setting::Target.new
+  target = setting.targets[:readme] = Setting::Target.new
   target.output = "README.pdf"
   target.add_source("README.md")
-  target.style = "normal"
+  target.style_name = :normal
 
-  style = setting.styles["normal"] = Setting::Style.new
+  style = setting.styles[:normal] = Setting::Style.new
   style.document.width = 148.mm
   style.document.height = 210.mm
-  style.document.default_font_name = "hiramin"
+  style.document.default_font_name = :hiramin
   style.document.default_font_size = 9.pt
   style.document.default_line_gap = 6.pt
   style.page.margin = TypesetMargin.new(top: 1.5.cm, right: 2.cm, bottom: 1.5.cm, left: 2.cm)
   style.page.to_footer_gap = 0.8.cm - 9.pt
-  style.blocks["h1"].margin = TypesetMargin.new(bottom: 20.pt)
-  style.blocks["h1"].font_name = "hiramin_bold"
-  style.blocks["h1"].font_size = 16.pt
-  style.blocks["h2"].margin = TypesetMargin.new(top: 20.pt, bottom: 14.pt)
-  style.blocks["h2"].font_name = "hiramin_bold"
-  style.blocks["h2"].font_size = 12.pt
-  style.blocks["p"].margin = TypesetMargin.new(top: 7.pt, bottom: 7.pt)
-  style.blocks["pre"].margin = TypesetMargin.new(top: 15.pt, bottom: 15.pt)
-  style.blocks["pre"].line_gap = 2.pt
-  style.inlines["em"].font_name = "hiramin_bold"
-  style.inlines["strong"].font_name = "hiramin_bold"
-  style.inlines["code"].font_name = "ricty"
+  style.blocks[:h1].margin = TypesetMargin.new(bottom: 20.pt)
+  style.blocks[:h1].font_name = :hiramin_bold
+  style.blocks[:h1].font_size = 16.pt
+  style.blocks[:h2].margin = TypesetMargin.new(top: 20.pt, bottom: 14.pt)
+  style.blocks[:h2].font_name = :hiramin_bold
+  style.blocks[:h2].font_size = 12.pt
+  style.blocks[:p].margin = TypesetMargin.new(top: 7.pt, bottom: 7.pt)
+  style.blocks[:pre].margin = TypesetMargin.new(top: 15.pt, bottom: 15.pt)
+  style.blocks[:pre].line_gap = 2.pt
+  style.inlines[:em].font_name = :hiramin_bold
+  style.inlines[:strong].font_name = :hiramin_bold
+  style.inlines[:code].font_name = :ricty
 
-  font = setting.fonts["hiramin"] = Setting::Font.new
+  font = setting.fonts[:hiramin] = Setting::Font.new
   font.file = "ヒラギノ明朝 ProN.ttc"
   font.index = 0
 
-  font = setting.fonts["hiramin_bold"] = Setting::Font.new
+  font = setting.fonts[:hiramin_bold] = Setting::Font.new
   font.file = "ヒラギノ明朝 ProN.ttc"
   font.index = 2
 
-  font = setting.fonts["ricty"] = Setting::Font.new
+  font = setting.fonts[:ricty] = Setting::Font.new
   font.file = "RictyDiminished-Regular.ttf"
 
-  setting.default_target = "sample"
+  setting.default_target = :sample
 
   # 設定のチェック
   setting.raise_if_invalid
@@ -281,7 +288,7 @@ if __FILE__ == $0
     puts "  output : #{target.output}"
     puts "  sources: #{target.sources.join(', ')}"
     puts "  macro  : #{target.macro || '(none)'}"
-    puts "  style  : #{target.style}"
+    puts "  style  : #{target.style_name}"
   end
 
   setting.styles.each do |name, style|
@@ -302,25 +309,29 @@ if __FILE__ == $0
       puts "    #{tag}:"
       puts "      margin   : #{block.margin || '(default)'}"
       puts "      padding  : #{block.padding || '(default)'}"
-      puts "      font name: #{block.font_name || '(default)'}"
-      puts "      font size: #{block.font_size || '(default)'}"
       puts "      line gap : #{block.line_gap || '(default)'}"
       puts "      new page : #{block.begin_new_page?}"
       puts "      indent   : #{block.indent}"
+      puts "      font name: #{block.font_name || '(default)'}"
+      puts "      font size: #{block.font_size || '(default)'}"
+      puts "      verbatim : #{block.verbatim? || '(default)'}"
     end
 
     puts "  inlines:"
     style.inlines.each do |tag, inline|
       puts "    #{tag}:"
+      puts "      margin   : #{inline.margin || '(default)'}"
+      puts "      padding  : #{inline.padding || '(default)'}"
       puts "      font name: #{inline.font_name || '(default)'}"
-      puts "      ignore LF: #{inline.ignore_line_feed}"
+      puts "      font size: #{inline.font_size || '(default)'}"
+      puts "      verbatim : #{inline.verbatim? || '(default)'}"
     end
   end
 
   setting.fonts.each do |name, font|
-    sfnt_font = font.sfnt_font
-    puts "font: #{name} (#{sfnt_font.name})"
-    puts "  file: #{font.file} (#{sfnt_font.path})"
+    pdf_font = font.pdf_font
+    puts "font: #{name} (#{pdf_font.id})"
+    puts "  file: #{font.file}"
     puts "  index: #{font.index}" if font.index
   end
 
