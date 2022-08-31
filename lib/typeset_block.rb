@@ -57,6 +57,17 @@ class TypesetBlock
     child
   end
 
+  def get_last_line
+    if @children.empty?
+      # FIXME: この場合はインデントを追加する必要がありそう
+      self.new_line
+    elsif @children.last.is_a?(TypesetBlock)
+      self.new_line
+    else
+      @children.last
+    end
+  end
+
   # 改ページ用
   def push_line(line)
     @children.push line

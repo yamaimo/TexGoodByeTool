@@ -1,8 +1,9 @@
 # テキストの処理
 
-class TextHandler
+require_relative 'typeset_body'
+require_relative 'typeset_block'
 
-  HANGING_CHARS = ")]}>,.;:!?）」』、。；：！？ぁぃぅぇぉっゃゅょァィゥェォッャュョ"
+class TextHandler
 
   def self.add_to(dom_handler)
     handler = self.new(dom_handler)
@@ -14,56 +15,17 @@ class TextHandler
     @dom_handler = dom_handler
   end
 
-  def handle_text(text, typeset_document, ignore_line_feed)
-    font = @dom_handler.current_font
-    text.each_char do |char|
-      if (char == "\n") && ignore_line_feed
-        next
-      end
-
-      page = typeset_document.current_page
-      box = page.current_box
-      line = box.current_line
-
-      if char != "\n"
-        line.push font.get_typeset_char(char)
-      else
-        if line.height == 0
-          # 高さを確保しておく
-          line.push font.get_strut
-        end
-        line = box.new_line
-        line.push font.get_font_set_operation
-      end
-
-      # 改行処理
-      if line.width > line.allocated_width
-        last_char = line.pop
-        if HANGING_CHARS.include?(last_char.to_s)
-          # 元に戻して改行しない
-          # FIXME: 複数文字続く場合、はみ出しが大きくなる
-          line.push last_char
-        else
-          new_line = typeset_document.current_page.current_box.new_line
-          new_line.push font.get_font_set_operation
-          new_line.push last_char
-        end
-      end
-
-      # 改ページ処理
-      if box.height > box.allocated_height
-        last_line = box.pop
-        new_page = @dom_handler.create_new_page(typeset_document)
-        new_box = new_page.new_box(box.margin, box.padding, box.line_gap)
-        new_line = new_box.new_line
-        while char = last_line.shift
-          new_line.push char
-        end
-      end
+  def handle_text(text_str, parent, document)
+    if parent.is_a?(TypesetBody) || parent.is_a?(TypesetBlock)
+      parent = parent.get_last_line
     end
-    # FIXME: rescue_font対応はまだ
-    # FIXME: 禁則処理とか
-    # FIXME: "「"で始まる場合は2分空きにしたり
+    text = parent.new_text
+
+    text_str.each_char do |char|
+      text.add_char(char)
+      # 改行してる可能性があるので、最新のテキストを取得する
+      text = text.latest
+    end
   end
 
 end

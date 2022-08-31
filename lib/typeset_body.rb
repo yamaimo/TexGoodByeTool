@@ -32,6 +32,10 @@ class TypesetBody
     @children.map(&:height).sum
   end
 
+  def latest
+    @next.nil? ? self : @next.latest
+  end
+
   def new_block(block_style, text_style)
     allocated_width = @allocated_width
     # FIXME: さらに自身のpadding, 子のmarginから幅を計算する必要があるが後回し
@@ -48,6 +52,17 @@ class TypesetBody
     child = TypesetLine.new(self, allocated_width)
     @children.push child
     child
+  end
+
+  def get_last_line
+    if @children.empty?
+      # FIXME: この場合はインデントを追加する必要がありそう
+      self.new_line
+    elsif @children.last.is_a?(TypesetBlock)
+      self.new_line
+    else
+      @children.last
+    end
   end
 
   # 改ページ用

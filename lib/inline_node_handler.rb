@@ -1,40 +1,33 @@
 # インライン要素の処理
 
-require_relative 'typeset_font'
+require_relative 'typeset_body'
+require_relative 'typeset_block'
 
 class InlineNodeHandler
 
-  def self.add_to(dom_handler, tag, inline_node_style)
-    handler = self.new(dom_handler, inline_node_style)
+  def self.add_to(dom_handler, tag, inline_style, text_style)
+    handler = self.new(dom_handler, inline_style, text_style)
     dom_handler.register_node_handler(tag, handler)
     handler
   end
 
-  def initialize(dom_handler, inline_node_style)
+  def initialize(dom_handler, inline_style, text_style)
     @dom_handler = dom_handler
-    @style = inline_node_style
+    @inline_style = inline_style
+    @text_style = text_style
   end
 
-  def handle_node(inline_node, typeset_document)
-    line = typeset_document.current_page.current_box.current_line
-    prev_font = @dom_handler.current_font
-    font = TypesetFont.new(@style.sfnt_font, prev_font.size)
-    line.push font.get_font_set_operation
-
-    prev_ignore_line_feed = @dom_handler.ignore_line_feed
-    @dom_handler.ignore_line_feed = @style.ignore_line_feed
-
-    @dom_handler.stack_font(font) do
-      # inline_nodeの下はstringのみ
-      inline_node.each do |string|
-        @dom_handler.dispatch_node_handling(string, typeset_document)
-      end
+  def handle_node(inline_node, parent, document)
+    if parent.is_a?(TypesetBody) || parent.is_a?(TypesetBlock)
+      parent = parent.get_last_line
     end
+    inline = parent.new_inline(@inline_style, @text_style)
 
-    @dom_handler.ignore_line_feed = prev_ignore_line_feed
-
-    line = typeset_document.current_page.current_box.current_line
-    line.push prev_font.get_font_set_operation
+    inline_node.each do |child_node|
+      @dom_handler.dispatch_node_handling(child_node, inline, document)
+      # 改行してる可能性があるので、最新のインラインを取得する
+      inline = inline.latest
+    end
   end
 
 end
