@@ -1,6 +1,5 @@
 # 組版ドキュメント
 
-require 'forwardable'
 require 'set'
 
 require_relative 'typeset_page'
@@ -9,8 +8,6 @@ require_relative 'pdf_font'
 require_relative 'pdf_page'
 
 class TypesetDocument
-
-  extend Forwardable
 
   def initialize(width, height)
     @width = width

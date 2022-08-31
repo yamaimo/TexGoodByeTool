@@ -92,7 +92,7 @@ class TypesetLine
     last_child = @children.last
     case last_child
     when TypesetInline
-      @next.new_inline(last_child.text_style)
+      @next.new_inline(last_child.inline_style, last_child.text_style)
     when TypesetText
       @next.new_text
     #when TypesetImage  # FIXME: not yet

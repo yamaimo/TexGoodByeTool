@@ -69,7 +69,7 @@ class TypesetPage
     content.stack_graphic_state do
       upper_left_x = @page_style.margin.left
       upper_left_y = @page_style.margin.bottom + @allocated_height
-      content.move upper_left_x, upper_left_y
+      content.move_origin upper_left_x, upper_left_y
       @body.write_to content
     end
 
