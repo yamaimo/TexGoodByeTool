@@ -66,12 +66,10 @@ class TypesetPage
   end
 
   def write_to(content)
-    content.stack_graphic_state do
-      upper_left_x = @page_style.margin.left
-      upper_left_y = @page_style.margin.bottom + @allocated_height
-      content.move_origin upper_left_x, upper_left_y
-      @body.write_to content
-    end
+    upper_left_x = @page_style.margin.left
+    upper_left_y = @page_style.margin.bottom + @allocated_height
+    puts "TypesetPage#write_to (x: #{upper_left_x}, y: #{upper_left_y})"  # debug
+    @body.write_to content, upper_left_x, upper_left_y
 
     if @footer
       content.move_origin @page_style.margin.left, @page_style.margin.bottom

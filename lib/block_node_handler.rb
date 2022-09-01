@@ -31,6 +31,7 @@ class BlockNodeHandler
       # もし超えていたら、子でも高さを超えているはずなので、
       # そちらで改ページが実行済みになるため）
       if block.height > block.allocated_height
+        puts "height: #{block.height}, allocated_height: #{block.allocated_height}" # debug
         block.break_page
         block = block.latest
       end

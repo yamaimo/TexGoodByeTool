@@ -35,12 +35,12 @@ class TypesetText
 
   def ascender
     # FIXME: あとでtext_riseも足す
-    @text_style.font.ascender
+    @text_style.font.ascender * @text_style.size / 1000.0
   end
 
   def descender
     # FIXME: あとでtext_riseも足す
-    @text_style.font.descender
+    @text_style.font.descender * @text_style.size / 1000.0
   end
 
   def margin
@@ -62,6 +62,7 @@ class TypesetText
   end
 
   def add_char(char)
+    puts "TypesetText#add_char (char: #{char})" # debug
     last_char = @chars.empty? ? nil : @chars[-1].to_s
 
     # 改行文字の場合、
@@ -108,9 +109,12 @@ class TypesetText
     end
   end
 
-  def write_to(content)
+  def write_to(content, upper_left_x, upper_left_y)
+    x = upper_left_x
+    baseline_y = upper_left_y - self.ascender
     content.stack_graphic_state do
-      content.move_origin 0, -@text_style.font.ascender
+      content.move_origin x, baseline_y
+      puts "TypesetText#write_to (x: #{x}, y: #{baseline_y})"  # debug
       @text_style.to_pdf_text_setting.get_pen_for(content) do |pen|
         @chars.each do |char|
           char.write_with(pen)

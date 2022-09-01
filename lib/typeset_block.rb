@@ -74,9 +74,11 @@ class TypesetBlock
   end
 
   def break_line
+    puts "TypesetBlock#break_line"  # debug
     # 改ページが必要になってる場合、改ページして新しい行を返す
     # そうでない場合、単に新しい行を返す
     if self.height > @allocated_height
+      puts "height: #{self.height}, allocated_height: #{@allocated_height}" # debug
       self.break_page
       @next.new_line
     else
@@ -85,6 +87,7 @@ class TypesetBlock
   end
 
   def break_page
+    puts "TypesetBlock#break_page"  # debug
     @next = @parent.break_page
 
     # FIXME: 最後の子要素が空なら取り除くとか必要かも
@@ -99,17 +102,15 @@ class TypesetBlock
     end
   end
 
-  def write_to(content)
+  def write_to(content, upper_left_x, upper_left_y)
     # FIXME: 自身の境界線を引いたりpaddingスキップしたりが必要だけど後回し
-    y = 0
+    y = upper_left_y
     @children.each do |child|
-      content.stack_graphic_state do
-        child_x = 0 # FIXME: paddingとかmarginの計算が必要だけど後回し
-        content.move_origin child_x, y
-        child.write_to(content)
-        # この間のline_gap, marginの計算も必要だけど後回し
-        y += child.height
-      end
+      child_x = upper_left_x # FIXME: paddingとかmarginの計算が必要だけど後回し
+      puts "TypesetBlock#write_to (x: #{child_x}, y: #{y})"  # debug
+      child.write_to(content, child_x, y)
+      # この間のline_gap, marginの計算も必要だけど後回し
+      y -= child.height
     end
   end
 

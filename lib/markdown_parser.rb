@@ -20,22 +20,39 @@ require_relative 'text_handler'
 class MarkdownParser
 
   def initialize(style_setting, font_settings)
+    # FIXME: 本当は設定じゃなくてスタイルに変換したものを受け取った方がよさそう
+    # 今はフォントの登録をsetup_dom_handler内でやることになっていて微妙
     @style_setting = style_setting
     @font_settings = font_settings
   end
 
   def parse(markdown)
+    document, body = create_typeset_document_and_body
+
     html = markdown_to_html(markdown)
     dom = html_to_dom(html)
 
-    dom_handler = setup_dom_handler
-    document, body = create_typeset_document_and_body
+    dom_handler = setup_dom_handler_and_font(document)
     dom_handler.handle_dom(dom, body, document)
 
     document
   end
 
   private
+
+  def create_typeset_document_and_body
+    document_setting = @style_setting.document
+    document = TypesetDocument.new(document_setting.width, document_setting.height)
+
+    page_style = get_page_style
+    page = document.new_page(page_style)
+
+    default_text_style = get_default_text_style
+    document.add_font(default_text_style.font)
+    body = page.new_body(default_text_style, document_setting.default_line_gap)
+
+    [document, body]
+  end
 
   def markdown_to_html(markdown)
     redcarpet = Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true)
@@ -50,13 +67,14 @@ class MarkdownParser
       effort: :tolerant)  # 閉じタグがなくてもOKにする
   end
 
-  def setup_dom_handler
+  def setup_dom_handler_and_font(document)
     dom_handler = DomHandler.new
 
     # ブロック
     @style_setting.blocks.each do |tag, block_setting|
       block_style = get_block_style(block_setting)
       text_style = get_text_style(block_setting)
+      document.add_font(text_style.font) if text_style.font
       BlockNodeHandler.add_to(dom_handler, tag, block_style, text_style)
     end
 
@@ -64,6 +82,7 @@ class MarkdownParser
     @style_setting.inlines.each do |tag, inline_setting|
       inline_style = get_inline_style(inline_setting)
       text_style = get_text_style(inline_setting)
+      document.add_font(text_style.font) if text_style.font
       InlineNodeHandler.add_to(dom_handler, tag, inline_style, text_style)
     end
 
@@ -74,19 +93,6 @@ class MarkdownParser
     TextHandler.add_to(dom_handler)
 
     dom_handler
-  end
-
-  def create_typeset_document_and_body
-    document_setting = @style_setting.document
-    document = TypesetDocument.new(document_setting.width, document_setting.height)
-
-    page_style = get_page_style
-    page = document.new_page(page_style)
-
-    default_text_style = get_default_text_style
-    body = page.new_body(default_text_style, document_setting.default_line_gap)
-
-    [document, body]
   end
 
   def get_page_style

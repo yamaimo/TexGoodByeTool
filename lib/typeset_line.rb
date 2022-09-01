@@ -83,6 +83,7 @@ class TypesetLine
   end
 
   def break_line
+    puts "TypesetLine#break_line"  # debug
     @next = @parent.break_line
 
     # FIXME: 最後の子要素が空なら取り除くとか必要かも
@@ -100,17 +101,15 @@ class TypesetLine
     end
   end
 
-  def write_to(content)
-    x = 0
+  def write_to(content, upper_left_x, upper_left_y)
+    x = upper_left_x
     @children.each do |child|
-      content.stack_graphic_state do
-        # 自身のascenderの高さが基準で、子のascenderの高さにy軸の位置を持っていく
-        child_y = child.ascender - self.ascender
-        content.move_origin x, child_y
-        child.write_to(content)
-        # この間のmarginの計算も必要だけど後回し
-        x += child.width
-      end
+      # 自身のascenderの高さが基準で、子のascenderの高さにy軸の位置を持っていく
+      child_y = upper_left_y - self.ascender + child.ascender
+      puts "TypesetLine#write_to (x: #{x}, y: #{child_y})"  # debug
+      child.write_to(content, x, child_y)
+      # この間のmarginの計算も必要だけど後回し
+      x += child.width
     end
   end
 
