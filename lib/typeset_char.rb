@@ -1,6 +1,10 @@
 # 組版オブジェクト：文字
 
 class TypesetChar
+  # child: (none)
+  # parent: TypesetText
+  #   require: -
+  #   required: .create, #width, #stretch?, #strut?, #write_with, #to_s
 
   def self.create(char, font, size)
     gid = font.convert_to_gid(char).first
@@ -14,14 +18,19 @@ class TypesetChar
     @width = width
   end
 
-  attr_reader :gid, :width
+  attr_reader :char, :gid, :width
+  alias_method :to_s, :char
+
+  def stretch?
+    false
+  end
+
+  def strut?
+    false
+  end
 
   def write_with(pen)
     pen.putc(gid: @gid)
-  end
-
-  def to_s
-    @char
   end
 
 end

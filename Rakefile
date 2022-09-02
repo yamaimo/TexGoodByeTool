@@ -37,13 +37,13 @@ task :default => :build
 
 desc "Build target [target=#{available_target} (default=#{default_target})]"
 task :build, [:target] do |task, args|
-  target_name = args[:target] || default_target
+  target_name = args[:target]&.to_sym || default_target
   Rake::Task[target_name].invoke
 end
 
 desc "Open target [target=#{available_target} (default=#{default_target})]"
 task :open, [:target] do |task, args|
-  target_name = args[:target] || default_target
+  target_name = args[:target]&.to_sym || default_target
   Rake::Task[target_name].invoke
   output = setting.targets[target_name].output
   sh "open", output.to_s
@@ -60,7 +60,7 @@ setting.targets.each do |name, target|
   task name => output
 
   file output => depend_files do
-    style = setting.styles[target.style]
+    style = setting.styles[target.style_name]
     md2pdf output, sources, macro, style, setting.fonts
   end
 

@@ -1,15 +1,25 @@
 # 組版オブジェクト：テキスト
 
-require_relative 'typeset_margin'
+require_relative 'margin'
 require_relative 'text_style'
 require_relative 'typeset_char'
-require_relative 'typeset_stretch_space'
+require_relative 'typeset_space'
 
 class TypesetText
-  # 子としてTypesetChar, TypesetStretchSpaceを持ち、
-  # これらに#write_with(pen)を要求する。
-  # 親はTypesetLineもしくはTypesetInlineで、
-  # これらに#text_style, #break_lineを要求する。
+  # child: TypesetChar | TypesetSpace
+  #   require: #width, #write_with, #stretch?, #strut?,
+  #            TypesetChar.create, TypesetChar#to_s,
+  #            TypesetSpace.new_stretch, TypesetSpace.new_fix, TypesetSpace.new_strut,
+  #            TypesetSpace#stretch_count, TypesetSpace#width=
+  #   required: -
+  # parent: TypesetLine | TypesetInline
+  #   require: #text_style, #break_line, #adjust_stretch_width
+  #   required: #margin, #width, #ascender, #descender,
+  #             #stretch_count, #stretch_width=, #empty?, #write_to
+  # next:
+  #   require: #latest, #add_char
+  # other:
+  #   required: (not yet)
 
   RESTRICT_FIRST_CHARS = ")]}>,.;:!?）」』、。；：！？ぁぃぅぇぉっゃゅょァィゥェォッャュョ\u00a0"
   RESTRICT_LAST_CHARS = " ([{<（「『\u00a0" # \u00a0はnbsp
@@ -18,9 +28,9 @@ class TypesetText
   def initialize(parent, allocated_width)
     @parent = parent
     @allocated_width = allocated_width
-    @chars = []     # TypesetChar, TypesetStretchSpace
-    @stretches = [] # TypesetStretchSpaceのみ
     @text_style = @parent.text_style
+    @chars = []     # TypesetChar, TypesetSpace
+    @stretches = [] # TypesetSpaceのみ
     @break_idx = 0  # 改行の位置
     @next = nil
   end
@@ -44,16 +54,16 @@ class TypesetText
   end
 
   def margin
-    TypesetMargin.zero
+    Margin.zero
   end
 
   def stretch_count
-    @stretches.size
+    @stretches.map(&:stretch_count).sum || 0
   end
 
   def stretch_width=(width)
     @stretches.each do |stretch|
-      stretch.width = width
+      stretch.width = width * stretch.stretch_count
     end
   end
 
@@ -61,18 +71,34 @@ class TypesetText
     @next.nil? ? self : @next.latest
   end
 
+  def empty?
+    @chars.empty?
+  end
+
   def add_char(char)
     puts "TypesetText#add_char (char: #{char})" # debug
-    last_char = @chars.empty? ? nil : @chars[-1].to_s
+
+    last_child = @chars.empty? ? nil : @chars.last
+
+    # 最後にstrutが入っていた場合、遅延させていた改行を実行してから文字を追加
+    # （遅延させないと空行ができる可能性がある）
+    if last_child&.strut?
+      @next = @parent.break_line
+      @parent.adjust_stretch_width
+      @next.add_char(char)
+      return
+    end
+
+    last_char = last_child&.is_a?(TypesetChar) ? last_child.to_s : nil
 
     # 改行文字の場合、
-    # 1. verbatimなら改行して終了
+    # 1. verbatimならstrutを入れて終了（改行は遅延させる）
     # 2. そうでない場合、
     #    a. 直前が英数字なら改行のかわりに半角スペースを追加
     #    b. そうでなければ何もせずに終了
     if char == "\n"
       if @text_style.verbatim?
-        @next = @parent.break_line
+        @chars.push TypesetSpace.new_strut
         return
       else
         if replace_lf_to_space?(last_char)
@@ -90,9 +116,7 @@ class TypesetText
 
     # 伸縮スペースが必要なら先に追加しておく
     if add_stretch?(last_char, char)
-      stretch = TypesetStretchSpace.new(@text_style.size)
-      @chars.push stretch
-      @stretches.push stretch
+      self.add_stretch
     end
 
     # 組版文字を作って追加する
@@ -103,18 +127,30 @@ class TypesetText
     if self.width > @allocated_width
       next_line_str = pop_next_line_str
       @next = @parent.break_line
+      @parent.adjust_stretch_width
       next_line_str.each_char do |char|
         @next.add_char(char)
       end
     end
   end
 
+  def add_space(width)
+    space = TypesetSpace.new_fix(@text_style.size, width)
+    @chars.push space
+  end
+
+  def add_stretch(count=1)
+    stretch = TypesetSpace.new_stretch(@text_style.size, count)
+    @chars.push stretch
+    @stretches.push stretch
+  end
+
   def write_to(content, upper_left_x, upper_left_y)
-    x = upper_left_x
+    child_x = upper_left_x
     baseline_y = upper_left_y - self.ascender
     content.stack_graphic_state do
-      content.move_origin x, baseline_y
-      puts "TypesetText#write_to (x: #{x}, y: #{baseline_y})"  # debug
+      content.move_origin child_x, baseline_y
+      puts "TypesetText#write_to (x: #{child_x}, y: #{baseline_y})"  # debug
       @text_style.to_pdf_text_setting.get_pen_for(content) do |pen|
         @chars.each do |char|
           char.write_with(pen)
@@ -154,11 +190,15 @@ class TypesetText
     # このとき、次の行に移る伸縮スペースは取り除いておく
     # また、次の行の行頭にくる空白は取り除いておく（改行位置は空白の手前）
     next_line_chars.map do |char|
-      if char.is_a?(TypesetStretchSpace)
+      if char.stretch?
         @stretches.pop
         ""
-      else
+      elsif char.is_a?(TypesetChar)
         char.to_s
+      else
+        # 固定スペースがもしかしたら来るかもしれない
+        # その場合は直前に改行位置があるので、単に取り除くことにする
+        ""
       end
     end.join.lstrip
   end
@@ -166,96 +206,5 @@ class TypesetText
 end
 
 if __FILE__ == $0
-  require_relative 'sfnt_font'
-  require_relative 'length_extension'
-  require_relative 'pdf_document'
-  require_relative 'pdf_font'
-  require_relative 'pdf_page'
-  require_relative 'pdf_text'
-  require_relative 'pdf_object_binder'
-
-  class TypesetLineMock
-    def initialize(parent, text_style, allocated_width = 0)
-      @parent = parent
-      @text_style = text_style
-      @allocated_width = allocated_width
-      @children = []
-    end
-
-    attr_reader :text_style, :allocated_width
-
-    def add_child(child)
-      @children.push child
-    end
-
-    def break_line
-      # 本来は親が作って追加する
-      new_line = self.class.new(@parent, @text_style, @allocated_width)
-      @parent.push new_line
-
-      last_child = @children.last
-
-      stretch_count = last_child.stretch_count
-      if stretch_count > 0
-        stretch_width = (@allocated_width - last_child.width) / stretch_count
-        last_child.stretch_width = stretch_width
-      end
-
-      new_child = last_child.class.new(new_line, new_line.allocated_width)
-      new_line.add_child(new_child)
-
-      new_child
-    end
-
-    def write_to(content)
-      @children.each do |child|
-        child.write_to(content)
-      end
-    end
-  end
-
-  using LengthExtension
-
-  sfnt_font = SfntFont.load('ipaexm.ttf')
-  pdf_font = PdfFont.new(sfnt_font)
-  font_size = 14
-
-  text_style = TextStyle.new(font: pdf_font, size: font_size, verbatim: false)
-
-  lines = []
-  line = TypesetLineMock.new(lines, text_style, 5.cm)
-  text = TypesetText.new(line, 5.cm)
-  line.add_child(text)
-
-  script = <<~END_OF_SCRIPT
-    二人の若い紳士が、すっかりイギリスの兵隊のかたちをして、
-    ぴかぴかする鉄砲をかついで、歩いておりました。
-    Two young gentlemen were walking along,
-    fully dressed as British soldiers, carrying shiny guns.
-  END_OF_SCRIPT
-
-  script.each_char do |char|
-    text.add_char(char)
-    text = text.latest
-  end
-
-  # A5
-  page_width = 148.mm
-  page_height = 210.mm
-  document = PdfDocument.new(page_width, page_height)
-
-  page = PdfPage.add_to(document)
-  page.add_content do |content|
-    lines.each do |line|
-      line.write_to(content)
-    end
-  end
-
-  binder = PdfObjectBinder.new
-  # pageの内容だけ見る
-  page.attach_to(binder)
-
-  binder.serialized_objects.each do |serialized_object|
-    puts serialized_object
-  end
+  # not yet
 end

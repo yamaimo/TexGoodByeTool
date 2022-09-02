@@ -3,8 +3,6 @@
 require 'redcarpet'
 require 'ox'
 
-require_relative 'setting'
-
 require_relative 'typeset_document'
 require_relative 'page_style'
 require_relative 'block_style'
@@ -49,6 +47,7 @@ class MarkdownParser
 
     default_text_style = get_default_text_style
     document.add_font(default_text_style.font)
+    page.new_footer(default_text_style)
     body = page.new_body(default_text_style, document_setting.default_line_gap)
 
     [document, body]
@@ -97,45 +96,47 @@ class MarkdownParser
 
   def get_page_style
     page_setting = @style_setting.page
-    args = {}
-    args[:margin] = page_setting.margin if page_setting.margin != Setting::Style::DEFAULT
-    args[:padding] = page_setting.padding if page_setting.padding != Setting::Style::DEFAULT
-    args[:to_footer_gap] = page_setting.to_footer_gap
-    PageStyle.new(**args)
+    page_style = PageStyle.new
+    page_style.margin = page_setting.margin
+    page_style.padding = page_setting.padding
+    page_style.to_footer_gap = page_setting.to_footer_gap
+    page_style.freeze
   end
 
   def get_default_text_style
     document_setting = @style_setting.document
-    font = @font_settings[document_setting.default_font_name].pdf_font
-    size = document_setting.default_font_size
-    TextStyle.new(font: font, size: size, verbatim: false)
+    default_text_style = TextStyle.new
+    default_text_style.font = @font_settings[document_setting.default_font_name].pdf_font
+    default_text_style.size = document_setting.default_font_size
+    default_text_style.verbatim = false
+    default_text_style.freeze
   end
 
   def get_block_style(block_setting)
-    args = {}
-    args[:margin] = block_setting.margin if block_setting.margin != Setting::Style::DEFAULT
-    args[:padding] = block_setting.padding if block_setting.padding != Setting::Style::DEFAULT
-    args[:line_gap] = block_setting.line_gap if block_setting.line_gap != Setting::Style::DEFAULT
-    args[:begin_new_page] = block_setting.begin_new_page
-    args[:indent] = block_setting.indent
-    BlockStyle.new(**args)
+    block_style = BlockStyle.new
+    block_style.margin = block_setting.margin
+    block_style.padding = block_setting.padding
+    block_style.line_gap = block_setting.line_gap
+    block_style.begin_new_page = block_setting.begin_new_page
+    block_style.indent = block_setting.indent
+    block_style.freeze
   end
 
   def get_inline_style(inline_setting)
-    args = {}
-    args[:margin] = inline_setting.margin if inline_setting.margin != Setting::Style::DEFAULT
-    args[:padding] = inline_setting.padding if inline_setting.padding != Setting::Style::DEFAULT
-    InlineStyle.new(**args)
+    inline_style = InlineStyle.new
+    inline_style.margin = inline_setting.margin
+    inline_style.padding = inline_setting.padding
+    inline_style.freeze
   end
 
   def get_text_style(node_setting)
-    args = {}
-    if node_setting.font_name != Setting::Style::DEFAULT
-      args[:font] = @font_settings[node_setting.font_name].pdf_font
+    text_style = TextStyle.new
+    if node_setting.font_name
+      text_style.font = @font_settings[node_setting.font_name].pdf_font
     end
-    args[:size] = node_setting.font_size if node_setting.font_size != Setting::Style::DEFAULT
-    args[:verbatim] = node_setting.verbatim if node_setting.verbatim != Setting::Style::DEFAULT
-    TextStyle.new(**args)
+    text_style.size = node_setting.font_size
+    text_style.verbatim = node_setting.verbatim
+    text_style.freeze
   end
 
 end

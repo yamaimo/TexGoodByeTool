@@ -1,16 +1,27 @@
 # 組版オブジェクト：行
 
-require_relative 'typeset_margin'
+require_relative 'margin'
+require_relative 'padding'
+require_relative 'inline_style'
 require_relative 'text_style'
 require_relative 'typeset_inline'
 require_relative 'typeset_text'
+require_relative 'typeset_image'
 
 class TypesetLine
-  # 子としてTypesetInline, TypesetText, TypesetImageを持ち、
-  # これらに#width, #ascender, #descender,
-  # #stretch_count, #stretch_width=, #write_to(content)を要求する。
-  # 親はTypesetBodyもしくはTypesetBlockで、
-  # これらに#text_style, #break_lineを要求する。
+  # child: TypesetInline | TypesetText | TypesetImage
+  #   require: #margin, #width, #ascender, #descender,
+  #            #stretch_count, #stretch_width=, #write_to
+  #   required: #inline_style, #text_style, #break_line, #adjust_stretch_width
+  # parent: TypesetBody | TypesetBlock
+  #   require: #text_style, #break_line
+  #   required: #margin, #width, #ascender, #descender, #height,
+  #             #stretch_count, #stretch_width=,
+  #             TypesetLine#update_parent, #empty?, #write_to
+  # next:
+  #   require: #latest
+  # other:
+  #   required: 
 
   # FIXME:
   # 子要素間に伸縮スペースを入れるか設定で必要そう。
@@ -18,17 +29,31 @@ class TypesetLine
   def initialize(parent, allocated_width)
     @parent = parent
     @allocated_width = allocated_width
+    @inline_style = InlineStyle.new
     @text_style = @parent.text_style
     @allocated_width = allocated_width
     @children = []
     @next = nil
   end
 
-  attr_reader :text_style, :allocated_width
+  attr_reader :inline_style, :text_style, :allocated_width
 
   def width
-    # FIXME: 子の間のmarginの計算が必要だけど後回し
-    @children.map(&:width).sum
+    width = 0
+
+    prev_child = nil
+    @children.each do |child|
+      if prev_child.nil?
+        width += child.margin.left
+      else
+        width += Margin.calc_collapsing(prev_child.margin.right, child.margin.left)
+      end
+      width += child.width
+      prev_child = child
+    end
+    width += prev_child.margin.right if prev_child
+
+    width
   end
 
   def height
@@ -36,36 +61,47 @@ class TypesetLine
   end
 
   def ascender
-    # FIXME: 子のmarginの計算も必要だけど後回し
-    @children.map(&:ascender).max || 0
+    @children.map do |child|
+      child.ascender + child.margin.top
+    end.max || 0
   end
 
   def descender
-    # FIXME: 子のmarginの計算も必要だけど後回し
-    @children.map(&:descender).min || 0
+    @children.map do |child|
+      child.descender - child.margin.bottom
+    end.min || 0
   end
 
   def margin
-    TypesetMargin.zero
+    Margin.zero
   end
 
-  def stretch_count
-    @children.map(&:stretch_count).sum
+  def padding
+    Padding.zero
   end
 
-  def stretch_width=(width)
-    @children.each do |child|
-      child.stretch_width = width
-    end
+  def update_parent
+    @parent = @parent.latest
   end
 
   def latest
     @next.nil? ? self : @next.latest
   end
 
+  def empty?
+    @children.empty?
+  end
+
   def new_inline(inline_style, text_style)
     allocated_width = @allocated_width - self.width
-    # FIXME: さらに子のmarginから幅を計算する必要があるが後回し
+    if @children.empty?
+      allocated_width -= (inline_style.margin.left + inline_style.margin.right)
+    else
+      last_child = @children.last
+      allocated_width += last_child.margin.right
+      allocated_width -= Margin.calc_collapsing(last_child.margin.right, inline_style.margin.left)
+      allocated_width -= inline_style.margin.right
+    end
     child = TypesetInline.new(self, inline_style, text_style, allocated_width)
     @children.push child
     child
@@ -73,6 +109,7 @@ class TypesetLine
 
   def new_text
     allocated_width = @allocated_width - self.width
+    # textはマージンが0なのでそのまま使える
     child = TypesetText.new(self, allocated_width)
     @children.push child
     child
@@ -84,122 +121,56 @@ class TypesetLine
 
   def break_line
     puts "TypesetLine#break_line"  # debug
+
+    # 子が空になっている場合、あらかじめ取り除いておく
+    last_child = @children.last
+    @children.pop if last_child.empty?
+
     @next = @parent.break_line
 
-    # FIXME: 最後の子要素が空なら取り除くとか必要かも
-
-    adjust_stretch_width
-
-    last_child = @children.last
     case last_child
     when TypesetInline
       @next.new_inline(last_child.inline_style, last_child.text_style)
     when TypesetText
       @next.new_text
-    #when TypesetImage  # FIXME: not yet
-      #@next.new_image
+    when TypesetImage
+      #@next.new_image  # FIXME: not yet
+    end
+  end
+
+  def adjust_stretch_width
+    stretch_count = @children.map(&:stretch_count).sum
+    if stretch_count > 0
+      stretch_width = (@allocated_width - self.width) / stretch_count
+      @children.each do |child|
+        child.stretch_width = stretch_width
+      end
     end
   end
 
   def write_to(content, upper_left_x, upper_left_y)
-    x = upper_left_x
+    child_x = upper_left_x
+    prev_child = nil
     @children.each do |child|
+      if prev_child.nil?
+        child_x += child.margin.left
+      else
+        child_x += Margin.calc_collapsing(prev_child.margin.right, child.margin.left)
+      end
+
       # 自身のascenderの高さが基準で、子のascenderの高さにy軸の位置を持っていく
       child_y = upper_left_y - self.ascender + child.ascender
-      puts "TypesetLine#write_to (x: #{x}, y: #{child_y})"  # debug
-      child.write_to(content, x, child_y)
-      # この間のmarginの計算も必要だけど後回し
-      x += child.width
-    end
-  end
 
-  private
+      puts "TypesetLine#write_to (x: #{child_x}, y: #{child_y})"  # debug
+      child.write_to(content, child_x, child_y)
 
-  def adjust_stretch_width
-    stretch_count = self.stretch_count
-    if stretch_count > 0
-      stretch_width = (@allocated_width - self.width) / stretch_count
-      self.stretch_width = stretch_width
+      child_x += child.width
+      prev_child = child
     end
   end
 
 end
 
 if __FILE__ == $0
-  require_relative 'sfnt_font'
-  require_relative 'length_extension'
-  require_relative 'pdf_document'
-  require_relative 'pdf_font'
-  require_relative 'pdf_page'
-  require_relative 'pdf_text'
-  require_relative 'pdf_object_binder'
-
-  class TypesetBlockMock
-    def initialize(text_style, allocated_width)
-      @text_style = text_style
-      @allocated_width = allocated_width
-      @children = []
-    end
-
-    attr_reader :text_style, :allocated_width
-
-    def add_child(child)
-      @children.push child
-    end
-
-    def break_line
-      line = TypesetLine.new(self, @allocated_width)
-      add_child(line)
-      line
-    end
-
-    def write_to(content)
-      @children.each do |child|
-        child.write_to(content)
-      end
-    end
-  end
-
-  using LengthExtension
-
-  sfnt_font = SfntFont.load('ipaexm.ttf')
-  pdf_font = PdfFont.new(sfnt_font)
-  font_size = 14
-
-  text_style = TextStyle.new(font: pdf_font, size: font_size, verbatim: false)
-
-  block = TypesetBlockMock.new(text_style, 5.cm)
-  line = TypesetLine.new(block, 5.cm)
-  block.add_child(line)
-
-  script = <<~END_OF_SCRIPT
-    二人の若い紳士が、すっかりイギリスの兵隊のかたちをして、
-    ぴかぴかする鉄砲をかついで、歩いておりました。
-    Two young gentlemen were walking along,
-    fully dressed as British soldiers, carrying shiny guns.
-  END_OF_SCRIPT
-
-  text = line.new_text
-  script.each_char do |char|
-    text.add_char(char)
-    text = text.latest
-  end
-
-  # A5
-  page_width = 148.mm
-  page_height = 210.mm
-  document = PdfDocument.new(page_width, page_height)
-
-  page = PdfPage.add_to(document)
-  page.add_content do |content|
-    block.write_to(content)
-  end
-
-  binder = PdfObjectBinder.new
-  # pageの内容だけ見る
-  page.attach_to(binder)
-
-  binder.serialized_objects.each do |serialized_object|
-    puts serialized_object
-  end
+  # not yet
 end

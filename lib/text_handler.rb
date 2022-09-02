@@ -17,7 +17,7 @@ class TextHandler
 
   def handle_text(text_str, parent, document)
     if parent.is_a?(TypesetBody) || parent.is_a?(TypesetBlock)
-      parent = parent.get_last_line
+      parent = parent.current_line
     end
     text = parent.new_text
 

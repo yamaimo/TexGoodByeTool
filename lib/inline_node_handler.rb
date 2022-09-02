@@ -19,7 +19,7 @@ class InlineNodeHandler
 
   def handle_node(inline_node, parent, document)
     if parent.is_a?(TypesetBody) || parent.is_a?(TypesetBlock)
-      parent = parent.get_last_line
+      parent = parent.current_line
     end
     inline = parent.new_inline(@inline_style, @text_style)
 

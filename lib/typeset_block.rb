@@ -1,12 +1,23 @@
 # 組版オブジェクト：ブロック要素
 
+require_relative 'typeset_space'
 require_relative 'typeset_line'
 
 class TypesetBlock
-  # 子としてTypesetBlock, TypesetLineを持ち、
-  # これらに#width, #height, #margin, #write_to(content)を要求する。
-  # 親はTypesetBodyもしくはTypesetBlockで、
-  # これらに#block_style, #text_style, #break_pageを要求する。
+  # child: TypesetBlock | TypesetLine
+  #   require: #margin, #width, #height,
+  #            TypesetBlock#block_style, #text_style
+  #            TypesetLine#update_parent, #write_to, #empty?
+  #   required: #block_style, #text_style, #break_line, #break_page
+  # parent: TypesetBody | TypesetBlock
+  #   require: #block_style, #text_style, #break_page
+  #   required: #margin, #width, #height
+  #             TypesetBlock#block_style, #text_style
+  #             TypesetLine#update_parent, #write_to, #empty?
+  # next:
+  #   require: #new_block, #new_line, #push_line
+  # other:
+  #   required: #current_line
 
   def initialize(parent, block_style, text_style, allocated_width, allocated_height)
     @parent = parent
@@ -15,35 +26,95 @@ class TypesetBlock
     @allocated_width = allocated_width
     @allocated_height = allocated_height
     @children = []
+    @prev = nil
     @next = nil
+    @margin = nil   # キャッシュ
+    @padding = nil  # キャッシュ
   end
 
   attr_reader :block_style, :text_style, :allocated_width, :allocated_height
 
   def width
-    # FIXME: 自身のpadding, 子の間のmarginの計算が必要だけど後回し
-    @children.map(&:width).max
+    child_width = @children.map do |child|
+      child.width + child.margin.left + child.margin.right
+    end.max || 0
+    child_width + self.padding.left + self.padding.right
   end
 
   def height
-    # FIXME: 自身のpadding, 子の間のmarginの計算が必要だけど後回し
-    # FIXME: 子が行なのかブロックなのかで行送りの計算が必要
-    @children.map(&:height).sum
+    height = self.padding.top
+
+    prev_child = nil
+    @children.each do |child|
+      if prev_child.nil?
+        height += child.margin.top
+      else
+        height += Margin.calc_collapsing(prev_child.margin.bottom, child.margin.top)
+        if prev_child.is_a?(TypesetLine) && child.is_a?(TypesetLine)
+          height += @block_style.line_gap
+        end
+      end
+      height += child.height
+      prev_child = child
+    end
+    height += prev_child.margin.bottom if prev_child
+
+    height += self.padding.bottom
   end
 
   def margin
-    @block_style.margin
+    @margin ||= begin
+      top = @prev ? 0 : nil
+      bottom = @next ? 0 : nil
+      @block_style.margin.updated(top: top, bottom: bottom)
+    end
+  end
+
+  def padding
+    @padding ||= begin
+      top = @prev ? 0 : nil
+      bottom = @next ? 0 : nil
+      @block_style.padding.updated(top: top, bottom: bottom)
+    end
+  end
+
+  def prev=(prev_block)
+    @prev = prev_block
+    # キャッシュクリア
+    @margin = nil
+    @padding = nil
+  end
+
+  def next=(next_block)
+    @next = next_block
+    # キャッシュクリア
+    @margin = nil
+    @padding = nil
   end
 
   def latest
     @next.nil? ? self : @next.latest
   end
 
+  def empty?
+    @children.empty?
+  end
+
   def new_block(block_style, text_style)
     allocated_width = @allocated_width
-    # FIXME: さらに自身のpadding, 子のmarginから幅を計算する必要があるが後回し
+    allocated_width -= (self.padding.left + self.padding.right)
+    allocated_width -= (block_style.margin.left + block_style.margin.right)
+
     allocated_height = @allocated_height - self.height
-    # FIXME: さらに自身のpadding, 子のmarginから高さを計算する必要があるが後回し
+    if @children.empty?
+      allocated_height -= (block_style.margin.top + block_style.margin.bottom)
+    else
+      last_child = @children.last
+      allocated_height += last_child.margin.bottom
+      allocated_height -= Margin.calc_collapsing(last_child.margin.bottom, block_style.margin.top)
+      allocated_height -= block_style.margin.bottom
+    end
+
     child = TypesetBlock.new(self, block_style, text_style, allocated_width, allocated_height)
     @children.push child
     child
@@ -51,16 +122,23 @@ class TypesetBlock
 
   def new_line
     allocated_width = @allocated_width
-    # FIXME: さらに自身のpadding, 子のmarginから幅を計算する必要があるが後回し
+    allocated_width -= (self.padding.left + self.padding.right)
     child = TypesetLine.new(self, allocated_width)
     @children.push child
     child
   end
 
-  def get_last_line
+  # 現在の行を返す（なければ作って返す）
+  def current_line
     if @children.empty?
-      # FIXME: この場合はインデントを追加する必要がありそう
-      self.new_line
+      line = self.new_line
+      # 最初の行なので、必要ならインデントする
+      if @block_style.indent != 0
+        indent_size = @text_style.size * @block_style.indent
+        text = line.new_text
+        text.add_space(indent_size)
+      end
+      line
     elsif @children.last.is_a?(TypesetBlock)
       self.new_line
     else
@@ -75,6 +153,7 @@ class TypesetBlock
 
   def break_line
     puts "TypesetBlock#break_line"  # debug
+
     # 改ページが必要になってる場合、改ページして新しい行を返す
     # そうでない場合、単に新しい行を返す
     if self.height > @allocated_height
@@ -88,117 +167,68 @@ class TypesetBlock
 
   def break_page
     puts "TypesetBlock#break_page"  # debug
-    @next = @parent.break_page
 
-    # FIXME: 最後の子要素が空なら取り除くとか必要かも
+    # 子がいない状態で呼ばれたら、単に親に依頼する
+    if @children.empty?
+      self.next = @parent.break_page
+      return
+    end
 
     last_child = @children.last
+    # 子が空になっている場合、あらかじめ取り除いておく
+    # （これで自身も空になれば親から取り除かれる）
+    # そうでない場合も、子がTypesetLineなら高さをチェックし、
+    # 次のページに移す必要がある場合は取り除いておく
+    if last_child.empty?
+      @children.pop
+    elsif last_child.is_a?(TypesetLine) && (self.height > @allocated_height)
+      @children.pop
+    end
+
+    self.next = @parent.break_page
+
+    # 自身が空になっている場合親から取り除かれるので、
+    # 新しい要素が最初の要素になる
+    # なので、自身が空でない場合だけ、次の要素の前の要素を自身にする
+    @next.prev = self unless self.empty?
+
     case last_child
     when TypesetBlock
       @next.new_block(last_child.block_style, last_child.text_style)
     when TypesetLine
-      last_line = @children.pop
-      @next.push_line last_line
+      last_child.update_parent  # 新しいブロックが親になるようにする
+      @next.push_line last_child
+      last_child
     end
   end
 
   def write_to(content, upper_left_x, upper_left_y)
-    # FIXME: 自身の境界線を引いたりpaddingスキップしたりが必要だけど後回し
-    y = upper_left_y
+    # FIXME: 自身の境界線を引くのは後回し
+
+    child_y = upper_left_y - self.padding.top
+    prev_child = nil
     @children.each do |child|
-      child_x = upper_left_x # FIXME: paddingとかmarginの計算が必要だけど後回し
-      puts "TypesetBlock#write_to (x: #{child_x}, y: #{y})"  # debug
-      child.write_to(content, child_x, y)
-      # この間のline_gap, marginの計算も必要だけど後回し
-      y -= child.height
+      if prev_child.nil?
+        child_y -= child.margin.top
+      else
+        child_y -= Margin.calc_collapsing(prev_child.margin.bottom, child.margin.top)
+        if prev_child.is_a?(TypesetLine) && child.is_a?(TypesetLine)
+          child_y -= @block_style.line_gap
+        end
+      end
+
+      child_x = upper_left_x + self.padding.left + child.margin.left
+
+      puts "TypesetBlock#write_to (x: #{child_x}, y: #{child_y})"  # debug
+      child.write_to(content, child_x, child_y)
+
+      child_y -= child.height
+      prev_child = child
     end
   end
 
 end
 
 if __FILE__ == $0
-  require_relative 'sfnt_font'
-  require_relative 'length_extension'
-  require_relative 'pdf_document'
-  require_relative 'pdf_font'
-  require_relative 'pdf_page'
-  require_relative 'pdf_text'
-  require_relative 'pdf_object_binder'
-  require_relative 'block_style'
-
-  class TypesetBodyMock
-    def initialize(block_style, text_style, allocated_width, allocated_height)
-      @block_style = block_style
-      @text_style = text_style
-      @allocated_width = allocated_width
-      @allocated_height = allocated_height
-      @children = []
-    end
-
-    attr_reader :block_style, :text_style, :allocated_width, :allocated_height
-
-    def add_child(child)
-      @children.push child
-    end
-
-    def break_page
-      last_child = @children.last
-      child = TypesetBlock.new(self, last_child.block_style, last_child.text_style,
-                               @allocated_width, @allocated_height)
-      add_child(child)
-      child
-    end
-
-    def write_to(content)
-      @children.each do |child|
-        child.write_to(content)
-      end
-    end
-  end
-
-  using LengthExtension
-
-  sfnt_font = SfntFont.load('ipaexm.ttf')
-  pdf_font = PdfFont.new(sfnt_font)
-  font_size = 14
-
-  block_style = BlockStyle.new(line_gap: 0)
-  text_style = TextStyle.new(font: pdf_font, size: font_size, verbatim: false)
-
-  body = TypesetBodyMock.new(block_style, text_style, 5.cm, 5.cm)
-  block = TypesetBlock.new(body, block_style, text_style, 5.cm, 5.cm)
-  body.add_child(block)
-
-  line = block.new_line
-
-  script = <<~END_OF_SCRIPT
-    二人の若い紳士が、すっかりイギリスの兵隊のかたちをして、
-    ぴかぴかする鉄砲をかついで、歩いておりました。
-    Two young gentlemen were walking along,
-    fully dressed as British soldiers, carrying shiny guns.
-  END_OF_SCRIPT
-
-  text = line.new_text
-  script.each_char do |char|
-    text.add_char(char)
-    text = text.latest
-  end
-
-  # A5
-  page_width = 148.mm
-  page_height = 210.mm
-  document = PdfDocument.new(page_width, page_height)
-
-  page = PdfPage.add_to(document)
-  page.add_content do |content|
-    body.write_to(content)
-  end
-
-  binder = PdfObjectBinder.new
-  # pageの内容だけ見る
-  page.attach_to(binder)
-
-  binder.serialized_objects.each do |serialized_object|
-    puts serialized_object
-  end
+  # not yet
 end

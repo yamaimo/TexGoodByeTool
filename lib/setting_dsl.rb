@@ -2,8 +2,8 @@
 
 require_relative 'setting'
 require_relative 'length_extension'
-require_relative 'typeset_margin'
-require_relative 'typeset_padding'
+require_relative 'margin'
+require_relative 'padding'
 
 class SettingDsl
 
@@ -66,11 +66,11 @@ class SettingDsl
       end
 
       def margin(top: 0, right: 0, bottom: 0, left: 0)
-        @setting.margin = TypesetMargin.new(top: top, right: right, bottom: bottom, left: left)
+        @setting.margin = Margin.new(top: top, right: right, bottom: bottom, left: left)
       end
 
       def padding(top: 0, right: 0, bottom: 0, left: 0)
-        @setting.padding = TypesetPadding.new(top: top, right: right, bottom: bottom, left: left)
+        @setting.padding = Padding.new(top: top, right: right, bottom: bottom, left: left)
       end
 
       def to_footer_gap(size)
@@ -86,11 +86,11 @@ class SettingDsl
       end
 
       def margin(top: 0, right: 0, bottom: 0, left: 0)
-        @setting.margin = TypesetMargin.new(top: top, right: right, bottom: bottom, left: left)
+        @setting.margin = Margin.new(top: top, right: right, bottom: bottom, left: left)
       end
 
       def padding(top: 0, right: 0, bottom: 0, left: 0)
-        @setting.padding = TypesetPadding.new(top: top, right: right, bottom: bottom, left: left)
+        @setting.padding = Padding.new(top: top, right: right, bottom: bottom, left: left)
       end
 
       def line_gap(size)
@@ -123,11 +123,11 @@ class SettingDsl
       end
 
       def margin(top: 0, right: 0, bottom: 0, left: 0)
-        @setting.margin = TypesetMargin.new(top: top, right: right, bottom: bottom, left: left)
+        @setting.margin = Margin.new(top: top, right: right, bottom: bottom, left: left)
       end
 
       def padding(top: 0, right: 0, bottom: 0, left: 0)
-        @setting.padding = TypesetPadding.new(top: top, right: right, bottom: bottom, left: left)
+        @setting.padding = Padding.new(top: top, right: right, bottom: bottom, left: left)
       end
 
       def font(name: nil, size: nil)
@@ -304,12 +304,12 @@ if __FILE__ == $0
   # 設定の参照
 
   # 表示用のモンキーパッチ
-  class TypesetMargin
+  class Margin
     def to_s
       "{top: #{@top}, right: #{@right}, bottom: #{@bottom}, left: #{@left}}"
     end
   end
-  class TypesetPadding
+  class Padding
     def to_s
       "{top: #{@top}, right: #{@right}, bottom: #{@bottom}, left: #{@left}}"
     end

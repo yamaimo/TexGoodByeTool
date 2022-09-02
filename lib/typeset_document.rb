@@ -8,6 +8,9 @@ require_relative 'pdf_font'
 require_relative 'pdf_page'
 
 class TypesetDocument
+  # child: TypesetPage
+  #   require: #page_style
+  #   required: #break_page, #page_count
 
   def initialize(width, height)
     @width = width
@@ -24,9 +27,7 @@ class TypesetDocument
   end
 
   def new_page(page_style)
-    allocated_width = @width - page_style.margin.left - page_style.margin.right
-    allocated_height = @height - page_style.margin.top - page_style.margin.bottom
-    page = TypesetPage.new(self, page_style, allocated_width, allocated_height)
+    page = TypesetPage.new(self, page_style, @width, @height)
     @pages.push page
     page
   end
@@ -69,5 +70,5 @@ class TypesetDocument
 end
 
 if __FILE__ == $0
-  # 後回し
+  # not yet
 end

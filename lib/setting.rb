@@ -44,8 +44,6 @@ class Setting
   # スタイル設定
   class Style
 
-    DEFAULT = nil
-
     # ドキュメント
     class Document
 
@@ -75,10 +73,10 @@ class Setting
     class Page
 
       def initialize
-        @margin = DEFAULT
-        @padding = DEFAULT
+        @margin = nil
+        @padding = nil
         # FIXME: フッタは別設定にした方がいいかもしれない
-        @to_footer_gap = 0
+        @to_footer_gap = nil
       end
 
       attr_accessor :margin, :padding, :to_footer_gap
@@ -89,14 +87,14 @@ class Setting
     class Block
 
       def initialize
-        @margin = DEFAULT
-        @padding = DEFAULT
-        @line_gap = DEFAULT
-        @begin_new_page = false
-        @indent = 0
-        @font_name = DEFAULT
-        @font_size = DEFAULT
-        @verbatim = DEFAULT
+        @margin = nil
+        @padding = nil
+        @line_gap = nil
+        @begin_new_page = nil
+        @indent = nil
+        @font_name = nil
+        @font_size = nil
+        @verbatim = nil
       end
 
       attr_accessor :margin, :padding, :line_gap
@@ -112,11 +110,11 @@ class Setting
     class Inline
 
       def initialize
-        @margin = DEFAULT
-        @padding = DEFAULT
-        @font_name = DEFAULT
-        @font_size = DEFAULT
-        @verbatim = DEFAULT
+        @margin = nil
+        @padding = nil
+        @font_name = nil
+        @font_size = nil
+        @verbatim = nil
       end
 
       attr_accessor :margin, :padding
@@ -211,8 +209,8 @@ class Setting
 end
 
 if __FILE__ == $0
-  require_relative 'typeset_margin'
-  require_relative 'typeset_padding'
+  require_relative 'margin'
+  require_relative 'padding'
   require_relative 'length_extension'
 
   using LengthExtension
@@ -238,16 +236,16 @@ if __FILE__ == $0
   style.document.default_font_name = :hiramin
   style.document.default_font_size = 9.pt
   style.document.default_line_gap = 6.pt
-  style.page.margin = TypesetMargin.new(top: 1.5.cm, right: 2.cm, bottom: 1.5.cm, left: 2.cm)
+  style.page.margin = Margin.new(top: 1.5.cm, right: 2.cm, bottom: 1.5.cm, left: 2.cm)
   style.page.to_footer_gap = 0.8.cm - 9.pt
-  style.blocks[:h1].margin = TypesetMargin.new(bottom: 20.pt)
+  style.blocks[:h1].margin = Margin.new(bottom: 20.pt)
   style.blocks[:h1].font_name = :hiramin_bold
   style.blocks[:h1].font_size = 16.pt
-  style.blocks[:h2].margin = TypesetMargin.new(top: 20.pt, bottom: 14.pt)
+  style.blocks[:h2].margin = Margin.new(top: 20.pt, bottom: 14.pt)
   style.blocks[:h2].font_name = :hiramin_bold
   style.blocks[:h2].font_size = 12.pt
-  style.blocks[:p].margin = TypesetMargin.new(top: 7.pt, bottom: 7.pt)
-  style.blocks[:pre].margin = TypesetMargin.new(top: 15.pt, bottom: 15.pt)
+  style.blocks[:p].margin = Margin.new(top: 7.pt, bottom: 7.pt)
+  style.blocks[:pre].margin = Margin.new(top: 15.pt, bottom: 15.pt)
   style.blocks[:pre].line_gap = 2.pt
   style.inlines[:em].font_name = :hiramin_bold
   style.inlines[:strong].font_name = :hiramin_bold
@@ -272,12 +270,12 @@ if __FILE__ == $0
   # 設定の参照
 
   # 表示用のモンキーパッチ
-  class TypesetMargin
+  class Margin
     def to_s
       "{top: #{@top}, right: #{@right}, bottom: #{@bottom}, left: #{@left}}"
     end
   end
-  class TypesetPadding
+  class Padding
     def to_s
       "{top: #{@top}, right: #{@right}, bottom: #{@bottom}, left: #{@left}}"
     end
