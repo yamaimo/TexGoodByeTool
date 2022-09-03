@@ -15,10 +15,14 @@ class BlockNodeHandler
   end
 
   def handle_node(block_node, parent, document)
-    # FIXME: @block_styleで改ページする設定なら改ページが必要
-    # ただ、直前が行で終わっていると、その行も改ページされそう（要調整）
-
     block = parent.new_block(@block_style, @text_style)
+
+    # 改ページする設定でページの先頭にいない場合、改ページする
+    # （ブロックが新しいページにコピーされ、元のブロックは空なので削除される；
+    # #break_pageは最後の子をコピーするので、あらかじめ追加しておく必要はある）
+    if @block_style.begin_new_page? && (not block.page_top?)
+      block = parent.break_page
+    end
 
     block_node.each do |child_node|
       @dom_handler.dispatch_node_handling(child_node, block, document)

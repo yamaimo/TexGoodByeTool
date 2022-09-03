@@ -10,7 +10,7 @@ class TypesetBlock
   #            TypesetLine#update_parent, #write_to, #empty?
   #   required: #block_style, #text_style, #break_line, #break_page
   # parent: TypesetBody | TypesetBlock
-  #   require: #block_style, #text_style, #break_page
+  #   require: #block_style, #text_style, #break_page, #page_top?
   #   required: #margin, #width, #height
   #             TypesetBlock#block_style, #text_style
   #             TypesetLine#update_parent, #write_to, #empty?
@@ -100,6 +100,11 @@ class TypesetBlock
     @children.empty?
   end
 
+  # ページの先頭にいるか
+  def page_top?
+    (@children.size > 1) ? false : @parent.page_top?
+  end
+
   def new_block(block_style, text_style)
     allocated_width = @allocated_width
     allocated_width -= (self.padding.left + self.padding.right)
@@ -168,11 +173,9 @@ class TypesetBlock
   def break_page
     puts "TypesetBlock#break_page"  # debug
 
-    # 子がいない状態で呼ばれたら、単に親に依頼する
-    if @children.empty?
-      self.next = @parent.break_page
-      return
-    end
+    # 子がいない状態で呼ばないこと
+    # （一番最後の子がコピーされるため）
+    raise "Invalid status (no children)." if @children.empty?
 
     last_child = @children.last
     # 子が空になっている場合、あらかじめ取り除いておく

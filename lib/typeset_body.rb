@@ -12,7 +12,7 @@ class TypesetBody
   #   require: #margin, #width, #height
   #            TypesetBlock#block_style, #text_style
   #            TypesetLine#update_parent, #write_to, #empty?
-  #   required: #block_style, #text_style, #break_page
+  #   required: #block_style, #text_style, #break_page, #page_top?
   # parent: TypesetPage
   #   require: #break_page
   #   required: #block_style, #text_style, #write_to
@@ -75,6 +75,11 @@ class TypesetBody
 
   def empty?  # いらないかも
     @children.empty?
+  end
+
+  # ページの先頭にいるか
+  def page_top?
+    @children.size <= 1
   end
 
   def new_block(block_style, text_style)
