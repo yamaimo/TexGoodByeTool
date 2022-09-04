@@ -287,7 +287,8 @@ module PdfGraphic
 
     def get_pen_for(content, &block)
       content.stack_graphic_state do
-        pen = Pen.new(content, use_even_odd_rule: @use_even_odd_rule)
+        pen = Pen.new(content,
+                      use_even_odd_rule: @use_even_odd_rule)
 
         # 設定されたものだけセットする
         pen.set_line_width(@line_width) if @line_width

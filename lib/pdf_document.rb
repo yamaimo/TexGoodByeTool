@@ -187,7 +187,8 @@ class PdfDocument
     @page_tree = PageTree.new(page_width, page_height, @resource)
     @named_destination = NamedDestination.new
     @outline = Outline.new
-    @root = DocCatalog.new(@page_tree, @named_destination, @outline)
+    @root = DocCatalog.new(@page_tree,
+                           @named_destination, @outline)
     @info = DocInfo.new
   end
 

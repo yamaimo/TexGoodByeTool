@@ -73,7 +73,8 @@ module PdfColor
 
     include Identifiable
 
-    def initialize(cyan: 0.0, magenta: 0.0, yellow: 0.0, black: 1.0)
+    def initialize(cyan: 0.0, magenta: 0.0,
+                   yellow: 0.0, black: 1.0)
       self.cyan = cyan
       self.magenta = magenta
       self.yellow = yellow

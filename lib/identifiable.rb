@@ -12,7 +12,8 @@ module Identifiable
   end
 
   def eql?(other)
-    other.is_a?(self.class) && self.id_values.eql?(other.id_values)
+    other.is_a?(self.class) \
+      && self.id_values.eql?(other.id_values)
   end
 
   alias_method :==, :eql?
