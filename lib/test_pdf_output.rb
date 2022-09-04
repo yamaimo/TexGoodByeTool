@@ -128,23 +128,23 @@ def draw_snowman(content, center, length, rad, color)
     snowman_muffler.rotate rad: rad, anchor: rotate_anchor
 
     # 描画
-    graphic = PdfGraphic.new
-    graphic.line_cap = PdfGraphic::LineCapStyle::ROUND
-    graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
-    graphic.write_in(content) do |pen|
+    graphic_setting = PdfGraphic::Setting.new
+    graphic_setting.line_cap = PdfGraphic::LineCapStyle::ROUND
+    graphic_setting.line_join = PdfGraphic::LineJoinStyle::ROUND
+    graphic_setting.get_pen_for(content) do |pen|
       pen.stroke snowman_body
       pen.stroke snowman_mouth
     end
 
-    graphic.fill_color = PdfColor::Rgb.new
-    graphic.write_in(content) do |pen|
+    graphic_setting.fill_color = PdfColor::Rgb.new
+    graphic_setting.get_pen_for(content) do |pen|
       snowman_eyes.each do |eye|
         pen.stroke_fill eye
       end
     end
 
-    graphic.fill_color = color
-    graphic.write_in(content) do |pen|
+    graphic_setting.fill_color = color
+    graphic_setting.get_pen_for(content) do |pen|
       pen.stroke_fill snowman_hat
       pen.stroke_fill snowman_muffler
     end
@@ -169,8 +169,8 @@ end
 page = PdfPage.add_to(document)
 page.add_content do |content|
   # 矩形、楕円の出力
-  graphic = PdfGraphic.new
-  graphic.write_in(content) do |pen|
+  graphic_setting = PdfGraphic::Setting.new
+  graphic_setting.get_pen_for(content) do |pen|
     basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm],
                                            [5.cm, 17.cm])
     pen.stroke basic_rect
@@ -216,19 +216,20 @@ document.add_destination(
 page = PdfPage.add_to(document)
 page.add_content do |content|
   # PNG画像の背景（マスクの確認用）
-  graphic = PdfGraphic.new
-  graphic.fill_color = PdfColor::Rgb.new green: 1, blue: 1
-  graphic.write_in(content) do |pen|
+  graphic_setting = PdfGraphic::Setting.new
+  fill_color = PdfColor::Rgb.new green: 1, blue: 1
+  graphic_setting.fill_color = fill_color
+  graphic_setting.get_pen_for(content) do |pen|
     basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm],
                                            [6.cm, 14.cm])
     pen.fill basic_rect
   end
 
   # 雪だるまのPNG画像
-  image = PdfImage.new
-  image.anchor = PdfImage::Anchor::CENTER
-  image.dpi = 350
-  image.write_in(content) do |pen|
+  image_setting = PdfImage::Setting.new
+  image_setting.anchor = PdfImage::Anchor::CENTER
+  image_setting.dpi = 350
+  image_setting.get_pen_for(content) do |pen|
     pen.paint snowman_png, x: 4.cm, y: 16.5.cm
   end
 end
@@ -246,9 +247,9 @@ page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 22.mm, 188.mm
 
-    text = PdfText.new(pdf_font, 14)
-    text.leading = 16
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 14)
+    text_setting.leading = 16
+    text_setting.get_pen_for(content) do |pen|
       # 文字の出力
       strs = [
         "ABCDE", "あいうえお", "斉斎齊齋",
@@ -270,13 +271,13 @@ page.add_content do |content|
     content.move_origin 22.mm, 128.mm
 
     # レンダリングモードを変えて出力
-    text = PdfText.new(pdf_font, 48)
-    text.leading = 56
-    text.rendering_mode = PdfText::RenderingMode::FILL_STROKE
-    text.line_width = 1.5
-    text.stroke_color = PdfColor::Rgb.new red: 1.0
-    text.fill_color = PdfColor::Rgb.new red: 1.0, green: 1.0
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 48)
+    text_setting.leading = 56
+    text_setting.rendering_mode = PdfText::RenderingMode::FILL_STROKE
+    text_setting.line_width = 1.5
+    text_setting.stroke_color = PdfColor::Rgb.new red: 1.0
+    text_setting.fill_color = PdfColor::Rgb.new red: 1.0, green: 1.0
+    text_setting.get_pen_for(content) do |pen|
       put_tex(pen, 48)
       pen.puts "グッバイ"
       pen.puts "したい！"
@@ -308,10 +309,10 @@ page.add_content do |content|
     content.move_origin 22.mm, 188.mm
 
     # 内部リンク
-    text = PdfText.new(pdf_font, 14)
-    text.leading = 16
-    text.fill_color = PdfColor::Rgb.new blue: 1.0
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 14)
+    text_setting.leading = 16
+    text_setting.fill_color = PdfColor::Rgb.new blue: 1.0
+    text_setting.get_pen_for(content) do |pen|
       dests = [
         "Page1", "矩形", "雪だるま",
         "Page2", "雪だるま（PNG画像）",
@@ -336,10 +337,10 @@ page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 92.mm, 188.mm
 
-    text = PdfText.new(pdf_font, 14)
-    text.leading = 16
-    text.fill_color = PdfColor::Rgb.new blue: 1.0
-    text.write_in(content) do |pen|
+    text_setting = PdfText::Setting.new(pdf_font, 14)
+    text_setting.leading = 16
+    text_setting.fill_color = PdfColor::Rgb.new blue: 1.0
+    text_setting.get_pen_for(content) do |pen|
       links = [
         {name: "Yahoo",
          uri: URI.parse("https://www.yahoo.co.jp/")},

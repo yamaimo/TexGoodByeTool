@@ -1,22 +1,34 @@
 # ページのスタイル
 
-require_relative 'typeset_margin'
-require_relative 'typeset_padding'
+require_relative 'margin'
+require_relative 'padding'
 
 class PageStyle
 
-  def initialize
-    @margin = TypesetMargin.zero_margin
-    @padding = TypesetPadding.zero_padding
-    @to_footer_gap = 0
+  # FIXME: ヘッダ、フッタの設定も追加したい
 
-    # FIXME: フッタのレイアウトもDomHandlerに委譲したい
-    # そうすればこの設定は不要になる（ブロックの設定でOK）
-    @footer_sfnt_font = nil
-    @footer_font_size = nil
+  def initialize
+    @margin = Margin.zero
+    @padding = Padding.zero
+    @to_footer_gap = 0
   end
 
-  attr_accessor :margin, :padding, :to_footer_gap
-  attr_accessor :footer_sfnt_font, :footer_font_size
+  attr_reader :margin, :padding, :to_footer_gap
 
+  def margin=(margin)
+    @margin = margin if margin
+  end
+
+  def padding=(padding)
+    @padding = padding if padding
+  end
+
+  def to_footer_gap=(gap)
+    @to_footer_gap = gap if gap
+  end
+
+end
+
+if __FILE__ == $0
+  # not yet
 end

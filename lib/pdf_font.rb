@@ -241,6 +241,7 @@ class PdfFont
   end
 
   def_delegators :@sfnt_font, :id, :convert_to_gid, :find_gid
+  def_delegators :@sfnt_font, :get_width, :ascender, :descender
 
 end
 

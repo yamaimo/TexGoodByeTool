@@ -88,23 +88,23 @@ def draw_snowman(content, center, length, rad, color)
     snowman_muffler.rotate rad: rad, anchor: rotate_anchor
 
     # 描画
-    graphic = PdfGraphic.new
-    graphic.line_cap = PdfGraphic::LineCapStyle::ROUND
-    graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
-    graphic.write_in(content) do |pen|
+    graphic_setting = PdfGraphic::Setting.new
+    graphic_setting.line_cap = PdfGraphic::LineCapStyle::ROUND
+    graphic_setting.line_join = PdfGraphic::LineJoinStyle::ROUND
+    graphic_setting.get_pen_for(content) do |pen|
       pen.stroke snowman_body
       pen.stroke snowman_mouth
     end
 
-    graphic.fill_color = PdfColor::Rgb.new
-    graphic.write_in(content) do |pen|
+    graphic_setting.fill_color = PdfColor::Rgb.new
+    graphic_setting.get_pen_for(content) do |pen|
       snowman_eyes.each do |eye|
         pen.stroke_fill eye
       end
     end
 
-    graphic.fill_color = color
-    graphic.write_in(content) do |pen|
+    graphic_setting.fill_color = color
+    graphic_setting.get_pen_for(content) do |pen|
       pen.stroke_fill snowman_hat
       pen.stroke_fill snowman_muffler
     end
@@ -114,8 +114,8 @@ end
 page = PdfPage.add_to(document)
 page.add_content do |content|
   # 矩形、楕円の出力
-  graphic = PdfGraphic.new
-  graphic.write_in(content) do |pen|
+  graphic_setting = PdfGraphic::Setting.new
+  graphic_setting.get_pen_for(content) do |pen|
     basic_rect = PdfGraphic::Rectangle.new([2.cm, 19.cm],
                                            [5.cm, 17.cm])
     pen.stroke basic_rect
