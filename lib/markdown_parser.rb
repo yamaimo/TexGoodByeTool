@@ -114,6 +114,7 @@ class MarkdownParser
 
   def get_block_style(block_setting)
     block_style = BlockStyle.new
+    block_style.border = block_setting.border
     block_style.margin = block_setting.margin
     block_style.padding = block_setting.padding
     block_style.line_gap = block_setting.line_gap
@@ -124,6 +125,7 @@ class MarkdownParser
 
   def get_inline_style(inline_setting)
     inline_style = InlineStyle.new
+    inline_style.border = inline_setting.border
     inline_style.margin = inline_setting.margin
     inline_style.padding = inline_setting.padding
     inline_style.freeze
@@ -210,7 +212,9 @@ if __FILE__ == $0
       end
 
       block "h1" do
+        border bottom: 2.pt
         margin bottom: 14.pt
+        padding bottom: 2.pt
         font name: "ipa_gothic", size: 14.pt
       end
 
@@ -224,16 +228,18 @@ if __FILE__ == $0
       end
 
       block "pre" do
+        border top: 1.pt, right: 1.pt, bottom: 1.pt, left: 1.pt
         margin top: 15.pt, bottom: 15.pt
         line_gap 2.pt
       end
 
       inline "em" do
+        border bottom: 0.5.pt
         font name: "ipa_gothic"
       end
 
       inline "strong" do
-        font name: "ipa_gothic"
+        font name: "ipa_gothic", size: 12.pt
       end
 
       inline "code" do

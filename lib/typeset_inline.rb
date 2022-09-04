@@ -38,6 +38,7 @@ class TypesetInline
   attr_reader :inline_style, :text_style, :allocated_width
 
   def width
+    # FIXME: borderの幅も追加すべきだけど後回し
     width = self.padding.left
 
     prev_child = nil
@@ -60,6 +61,7 @@ class TypesetInline
   end
 
   def ascender
+    # FIXME: borderの幅も追加すべきだけど後回し
     child_ascender = @children.map do |child|
       child.ascender + child.margin.top
     end.max || 0
@@ -67,6 +69,7 @@ class TypesetInline
   end
 
   def descender
+    # FIXME: borderの幅も追加すべきだけど後回し
     child_descender = @children.map do |child|
       child.descender - child.margin.bottom
     end.min || 0
@@ -179,8 +182,19 @@ class TypesetInline
   end
 
   def write_to(content, upper_left_x, upper_left_y)
-    # FIXME: 自身の境界線を引くのは後回し
+    border = @inline_style.border
+    if border.has_valid_line?
+      left_x = upper_left_x
+      right_x = upper_left_x + self.width
+      upper_y = upper_left_y
+      lower_y = upper_left_y - self.height
+      disabled = []
+      disabled.push :left if @prev
+      disabled.push :right if @next
+      border.write_to(content, left_x, right_x, upper_y, lower_y, disabled)
+    end
 
+    # FIXME: borderの幅も追加すべきだけど後回し
     child_x = upper_left_x + self.padding.left
     prev_child = nil
     @children.each do |child|

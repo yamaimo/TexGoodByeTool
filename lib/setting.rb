@@ -87,6 +87,7 @@ class Setting
     class Block
 
       def initialize
+        @border = nil
         @margin = nil
         @padding = nil
         @line_gap = nil
@@ -97,7 +98,7 @@ class Setting
         @verbatim = nil
       end
 
-      attr_accessor :margin, :padding, :line_gap
+      attr_accessor :border, :margin, :padding, :line_gap
       attr_accessor :begin_new_page
       alias_method :begin_new_page?, :begin_new_page
       attr_accessor :indent
@@ -110,6 +111,7 @@ class Setting
     class Inline
 
       def initialize
+        @border = nil
         @margin = nil
         @padding = nil
         @font_name = nil
@@ -117,7 +119,7 @@ class Setting
         @verbatim = nil
       end
 
-      attr_accessor :margin, :padding
+      attr_accessor :border, :margin, :padding
       attr_accessor :font_name, :font_size, :verbatim
       alias_method :verbatim?, :verbatim
 
@@ -209,6 +211,7 @@ class Setting
 end
 
 if __FILE__ == $0
+  require_relative 'border'
   require_relative 'margin'
   require_relative 'padding'
   require_relative 'length_extension'
@@ -245,6 +248,9 @@ if __FILE__ == $0
   style.blocks[:h2].font_name = :hiramin_bold
   style.blocks[:h2].font_size = 12.pt
   style.blocks[:p].margin = Margin.new(top: 7.pt, bottom: 7.pt)
+  style.blocks[:pre].border = Border.new
+  style.blocks[:pre].border.top.width = 1.pt
+  style.blocks[:pre].border.bottom.width = 1.pt
   style.blocks[:pre].margin = Margin.new(top: 15.pt, bottom: 15.pt)
   style.blocks[:pre].line_gap = 2.pt
   style.inlines[:em].font_name = :hiramin_bold
@@ -270,6 +276,11 @@ if __FILE__ == $0
   # 設定の参照
 
   # 表示用のモンキーパッチ
+  class Border
+    def to_s
+      "{top: #{@top.width}, right: #{@right.width}, bottom: #{@bottom.width}, left: #{@left.width}}"
+    end
+  end
   class Margin
     def to_s
       "{top: #{@top}, right: #{@right}, bottom: #{@bottom}, left: #{@left}}"
@@ -305,6 +316,7 @@ if __FILE__ == $0
     puts "  blocks:"
     style.blocks.each do |tag, block|
       puts "    #{tag}:"
+      puts "      border   : #{block.border || '(default)'}"
       puts "      margin   : #{block.margin || '(default)'}"
       puts "      padding  : #{block.padding || '(default)'}"
       puts "      line gap : #{block.line_gap || '(default)'}"
@@ -318,6 +330,7 @@ if __FILE__ == $0
     puts "  inlines:"
     style.inlines.each do |tag, inline|
       puts "    #{tag}:"
+      puts "      border   : #{inline.border || '(default)'}"
       puts "      margin   : #{inline.margin || '(default)'}"
       puts "      padding  : #{inline.padding || '(default)'}"
       puts "      font name: #{inline.font_name || '(default)'}"

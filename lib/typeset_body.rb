@@ -171,8 +171,6 @@ class TypesetBody
   end
 
   def write_to(content, upper_left_x, upper_left_y)
-    # FIXME: 自身の境界線を引くのは後回し
-
     child_y = upper_left_y
     prev_child = nil
     @children.each do |child|

@@ -2,6 +2,7 @@
 
 require_relative 'setting'
 require_relative 'length_extension'
+require_relative 'border'
 require_relative 'margin'
 require_relative 'padding'
 
@@ -85,6 +86,15 @@ class SettingDsl
         @setting = block_setting
       end
 
+      # FIXME: とりあえずのインタフェース（機能が増えたらクラス化必要）
+      def border(top: 0, right: 0, bottom: 0, left: 0)
+        @setting.border = Border.new
+        @setting.border.top.width = top
+        @setting.border.right.width = right
+        @setting.border.bottom.width = bottom
+        @setting.border.left.width = left
+      end
+
       def margin(top: 0, right: 0, bottom: 0, left: 0)
         @setting.margin = Margin.new(top: top, right: right, bottom: bottom, left: left)
       end
@@ -120,6 +130,15 @@ class SettingDsl
 
       def initialize(inline_setting)
         @setting = inline_setting
+      end
+
+      # FIXME: とりあえずのインタフェース（機能が増えたらクラス化必要）
+      def border(top: 0, right: 0, bottom: 0, left: 0)
+        @setting.border = Border.new
+        @setting.border.top.width = top
+        @setting.border.right.width = right
+        @setting.border.bottom.width = bottom
+        @setting.border.left.width = left
       end
 
       def margin(top: 0, right: 0, bottom: 0, left: 0)
@@ -266,6 +285,7 @@ if __FILE__ == $0
       end
 
       block :pre do
+        border top: 1.pt, bottom: 1.pt
         margin top: 15.pt, bottom: 15.pt
         line_gap 2.pt
       end
@@ -304,6 +324,11 @@ if __FILE__ == $0
   # 設定の参照
 
   # 表示用のモンキーパッチ
+  class Border
+    def to_s
+      "{top: #{@top.width}, right: #{@right.width}, bottom: #{@bottom.width}, left: #{@left.width}}"
+    end
+  end
   class Margin
     def to_s
       "{top: #{@top}, right: #{@right}, bottom: #{@bottom}, left: #{@left}}"
@@ -339,6 +364,7 @@ if __FILE__ == $0
     puts "  blocks:"
     style.blocks.each do |tag, block|
       puts "    #{tag}:"
+      puts "      border   : #{block.border || '(default)'}"
       puts "      margin   : #{block.margin || '(default)'}"
       puts "      padding  : #{block.padding || '(default)'}"
       puts "      line gap : #{block.line_gap || '(default)'}"
@@ -352,6 +378,7 @@ if __FILE__ == $0
     puts "  inlines:"
     style.inlines.each do |tag, inline|
       puts "    #{tag}:"
+      puts "      border   : #{inline.border || '(default)'}"
       puts "      margin   : #{inline.margin || '(default)'}"
       puts "      padding  : #{inline.padding || '(default)'}"
       puts "      font name: #{inline.font_name || '(default)'}"

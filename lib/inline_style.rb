@@ -1,19 +1,24 @@
 # インライン要素のスタイル
 
+require_relative 'border'
 require_relative 'margin'
 require_relative 'padding'
 
 class InlineStyle
 
-  # FIXME: あとでborderも追加
-  # 他、backgroundやnobreakなども必要そう
+  # FIXME: 他、backgroundやnobreakなども必要そう
 
   def initialize
+    @border = Border.new
     @margin = Margin.zero
     @padding = Padding.zero
   end
 
-  attr_reader :margin, :padding
+  attr_reader :border, :margin, :padding
+
+  def border=(border)
+    @border = border if border
+  end
 
   def margin=(margin)
     @margin = margin if margin

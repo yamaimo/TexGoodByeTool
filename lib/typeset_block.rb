@@ -35,6 +35,7 @@ class TypesetBlock
   attr_reader :block_style, :text_style, :allocated_width, :allocated_height
 
   def width
+    # FIXME: borderの幅も追加すべきだけど後回し
     child_width = @children.map do |child|
       child.width + child.margin.left + child.margin.right
     end.max || 0
@@ -42,6 +43,7 @@ class TypesetBlock
   end
 
   def height
+    # FIXME: borderの幅も追加すべきだけど後回し
     height = self.padding.top
 
     prev_child = nil
@@ -206,8 +208,19 @@ class TypesetBlock
   end
 
   def write_to(content, upper_left_x, upper_left_y)
-    # FIXME: 自身の境界線を引くのは後回し
+    border = @block_style.border
+    if border.has_valid_line?
+      left_x = upper_left_x
+      right_x = upper_left_x + @allocated_width # 幅いっぱいまで引く
+      upper_y = upper_left_y
+      lower_y = upper_left_y - self.height
+      disabled = []
+      disabled.push :top if @prev
+      disabled.push :bottom if @next
+      border.write_to(content, left_x, right_x, upper_y, lower_y, disabled)
+    end
 
+    # FIXME: borderの幅も追加すべきだけど後回し
     child_y = upper_left_y - self.padding.top
     prev_child = nil
     @children.each do |child|

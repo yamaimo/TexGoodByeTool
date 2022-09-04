@@ -1,14 +1,15 @@
 # ブロック要素のスタイル
 
+require_relative 'border'
 require_relative 'margin'
 require_relative 'padding'
 
 class BlockStyle
 
-  # FIXME: あとでborderも追加
-  # 他、backgroundなども必要そう
+  # FIXME: 他、backgroundなども必要そう
 
   def initialize
+    @border = Border.new
     @margin = Margin.zero
     @padding = Padding.zero
     @line_gap = nil # 継承
@@ -16,9 +17,13 @@ class BlockStyle
     @indent = 0
   end
 
-  attr_reader :margin, :padding
+  attr_reader :border, :margin, :padding
   attr_reader :line_gap, :begin_new_page, :indent
   alias_method :begin_new_page?, :begin_new_page
+
+  def border=(border)
+    @border = border if border
+  end
 
   def margin=(margin)
     @margin = margin if margin
