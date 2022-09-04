@@ -265,14 +265,15 @@ module PdfGraphic
   class Setting
 
     def initialize
-      @line_width = DEFAULT_LINE_WIDTH
-      @line_cap = DEFAULT_LINE_CAP
-      @line_join = DEFAULT_LINE_JOIN
-      @miter_limit = DEFAULT_MITER_LIMIT
-      @dash_pattern = DEFAULT_DASH_PATTERN
+      # 設定なしはnilにする
+      @line_width = nil
+      @line_cap = nil
+      @line_join = nil
+      @miter_limit = nil
+      @dash_pattern = nil
       @dash_phase = DEFAULT_DASH_PHASE
-      @stroke_color = DEFAULT_STROKE_COLOR
-      @fill_color = DEFAULT_FILL_COLOR
+      @stroke_color = nil
+      @fill_color = nil
       @use_even_odd_rule = DEFAULT_USE_EVEN_ODD_RULE
     end
 
@@ -283,13 +284,14 @@ module PdfGraphic
       content.stack_graphic_state do
         pen = Pen.new(content, use_even_odd_rule: @use_even_odd_rule)
 
-        pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
-        pen.set_line_cap(@line_cap) if @line_cap != DEFAULT_LINE_CAP
-        pen.set_line_join(@line_join) if @line_join != DEFAULT_LINE_JOIN
-        pen.set_miter_limit(@miter_limit) if @miter_limit != DEFAULT_MITER_LIMIT
-        pen.set_dash(@dash_pattern, @dash_phase) if @dash_pattern != DEFAULT_DASH_PATTERN
-        pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
-        pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
+        # 設定されたものだけセットする
+        pen.set_line_width(@line_width) if @line_width
+        pen.set_line_cap(@line_cap) if @line_cap
+        pen.set_line_join(@line_join) if @line_join
+        pen.set_miter_limit(@miter_limit) if @miter_limit
+        pen.set_dash(@dash_pattern, @dash_phase) if @dash_pattern
+        pen.set_stroke_color(@stroke_color) if @stroke_color
+        pen.set_fill_color(@fill_color) if @fill_color
 
         block.call(pen)
       end

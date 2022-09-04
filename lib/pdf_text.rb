@@ -97,12 +97,13 @@ module PdfText
     def initialize(pdf_font, font_size)
       @font = pdf_font
       @size = font_size
-      @leading = DEFAULT_LEADING
-      @text_rise = DEFAULT_TEXT_RISE
-      @rendering_mode = DEFAULT_RENDERING_MODE
-      @line_width = DEFAULT_LINE_WIDTH
-      @stroke_color = DEFAULT_STROKE_COLOR
-      @fill_color = DEFAULT_FILL_COLOR
+      # 設定なしはnilにする
+      @leading = nil
+      @text_rise = nil
+      @rendering_mode = nil
+      @line_width = nil
+      @stroke_color = nil
+      @fill_color = nil
     end
 
     attr_accessor :font, :size, :leading, :text_rise
@@ -113,14 +114,15 @@ module PdfText
         pen = Pen.new(content, @font)
 
         content.add_operation "BT"
-
         pen.set_font(@font, @size)
-        pen.set_leading(@leading) if @leading != DEFAULT_LEADING
-        pen.set_text_rise(@text_rise) if @text_rise != DEFAULT_TEXT_RISE
-        pen.set_rendering_mode(@rendering_mode) if @rendering_mode != DEFAULT_RENDERING_MODE
-        pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
-        pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
-        pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
+
+        # 設定されたものだけセットする
+        pen.set_leading(@leading) if @leading
+        pen.set_text_rise(@text_rise) if @text_rise
+        pen.set_rendering_mode(@rendering_mode) if @rendering_mode
+        pen.set_line_width(@line_width) if @line_width
+        pen.set_stroke_color(@stroke_color) if @stroke_color
+        pen.set_fill_color(@fill_color) if @fill_color
 
         block.call(pen)
 
