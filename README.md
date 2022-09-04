@@ -79,39 +79,31 @@ Jinja-likeなマクロを使える。
 (原稿)
 
 ```
-==========
 \{# 関数empty_lineはmacro.rbで定義 #}
 \{{ empty_line 3 }}
-==========
 ```
 
 (出力例)
 
-\==========
 {# 関数empty_lineはmacro.rbで定義 #}
 {{ empty_line 3 }}
-\==========
 
 ### マクロでコードを埋め込む例
 
 (原稿)
 
 ```
-==========
 \{% require 'pathname' %}
 \{% file = Pathname.new("lib") / "sfnt_font_type.rb" %}
 \{{ File.readlines(file)[0..59].join.chomp }}
-==========
 ```
 
 (出力例)
 
 ```
-==========
 {% require 'pathname' %}
 {% file = Pathname.new("lib") / "sfnt_font_type.rb" %}
 {{ File.readlines(file)[0..59].join.chomp }}
-==========
 ```
 
 ツールの更新/同期

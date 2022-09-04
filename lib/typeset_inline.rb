@@ -1,45 +1,47 @@
-# 組版オブジェクト：行
+# 組版オブジェクト：インライン要素
 
 require_relative 'margin'
-require_relative 'padding'
-require_relative 'inline_style'
-require_relative 'typeset_inline'
 require_relative 'typeset_text'
 require_relative 'typeset_image'
 
-class TypesetLine
+class TypesetInline
   # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: TypesetInline | TypesetText | TypesetImage
   #   require: #margin, #width, #ascender, #descender,
-  #            #stretch_count, #stretch_width=, #write_to
-  #   required: #inline_style, #text_style, #break_line, #adjust_stretch_width
-  # parent: TypesetBody | TypesetBlock
-  #   require: #text_style, #break_line
-  #   required: #margin, #width, #ascender, #descender, #height,
+  #            #stretch_count, #stretch_width=,
+  #            #empty?, #write_to
+  #   required: #text_style, #break_line, #adjust_stretch_width
+  # parent: TypesetLine | TypesetInline
+  #   require: #inline_style, #text_style, #break_line, #adjust_stretch_width
+  #   required: #margin, #width, #ascender, #descender,
   #             #stretch_count, #stretch_width=,
-  #             TypesetLine#update_parent, #empty?, #write_to
+  #             #empty?, #write_to
   # next:
-  #   require: #latest
+  #   require: #latest, #prev=, #new_inline, #new_text, #new_image
   # other:
-  #   required: 
+  #   required: (not yet)
 
   # FIXME:
-  # 子要素間に伸縮スペースを入れるか設定で必要そう。
+  # 子要素間に伸縮スペースを入れるかと、
+  # 子要素間での改行を許すかは、設定で必要そう。
 
-  def initialize(parent, allocated_width)
+  def initialize(parent, inline_style, text_style, allocated_width)
     @parent = parent
-    @allocated_width = allocated_width
-    @inline_style = InlineStyle.new
-    @text_style = @parent.text_style
+    @inline_style = inline_style.create_inherit_style(parent.inline_style)
+    @text_style = text_style.create_inherit_style(parent.text_style)
     @allocated_width = allocated_width
     @children = []
+    @prev = nil
     @next = nil
+    @margin = nil   # キャッシュ
+    @padding = nil  # キャッシュ
   end
 
   attr_reader :inline_style, :text_style, :allocated_width
 
   def width
-    width = 0
+    # FIXME: borderの幅も追加すべきだけど後回し
+    width = self.padding.left
 
     prev_child = nil
     @children.each do |child|
@@ -53,7 +55,7 @@ class TypesetLine
     end
     width += prev_child.margin.right if prev_child
 
-    width
+    width += self.padding.right
   end
 
   def height
@@ -61,27 +63,59 @@ class TypesetLine
   end
 
   def ascender
-    @children.map do |child|
+    # FIXME: borderの幅も追加すべきだけど後回し
+    child_ascender = @children.map do |child|
       child.ascender + child.margin.top
     end.max || 0
+    child_ascender + self.padding.top
   end
 
   def descender
-    @children.map do |child|
+    # FIXME: borderの幅も追加すべきだけど後回し
+    child_descender = @children.map do |child|
       child.descender - child.margin.bottom
     end.min || 0
+    child_descender - self.padding.bottom
   end
 
   def margin
-    Margin.zero
+    @margin ||= begin
+      left = @prev ? 0 : nil
+      right = @next ? 0 : nil
+      @inline_style.margin.updated(left: left, right: right)
+    end
   end
 
   def padding
-    Padding.zero
+    @padding ||= begin
+      left = @prev ? 0 : nil
+      right = @next ? 0 : nil
+      @inline_style.padding.updated(left: left, right: right)
+    end
   end
 
-  def update_parent
-    @parent = @parent.latest
+  def stretch_count
+    @children.map(&:stretch_count).sum
+  end
+
+  def stretch_width=(width)
+    @children.each do |child|
+      child.stretch_width = width
+    end
+  end
+
+  def prev=(prev_inline)
+    @prev = prev_inline
+    # キャッシュクリア
+    @margin = nil
+    @padding = nil
+  end
+
+  def next=(next_inline)
+    @next = next_inline
+    # キャッシュクリア
+    @margin = nil
+    @padding = nil
   end
 
   def latest
@@ -123,10 +157,16 @@ class TypesetLine
 
   def break_line
     # 子が空になっている場合、あらかじめ取り除いておく
+    # （これで自身も空になれば親から取り除かれる）
     last_child = @children.last
     @children.pop if last_child.empty?
 
-    @next = @parent.break_line
+    self.next = @parent.break_line
+
+    # 自身が空になっている場合親から取り除かれるので、
+    # 新しい要素が最初の要素になる
+    # なので、自身が空でない場合だけ、次の要素の前の要素を自身にする
+    @next.prev = self unless self.empty?
 
     case last_child
     when TypesetInline
@@ -140,17 +180,22 @@ class TypesetLine
   end
 
   def adjust_stretch_width
-    stretch_count = @children.map(&:stretch_count).sum
-    if stretch_count > 0
-      stretch_width = (@allocated_width - self.width) / stretch_count
-      @children.each do |child|
-        child.stretch_width = stretch_width
-      end
-    end
+    @parent.adjust_stretch_width
   end
 
   def write_to(content, left_x, upper_y)
-    child_x = left_x
+    border = @inline_style.border
+    if border.has_valid_line?
+      right_x = left_x + self.width
+      lower_y = upper_y - self.height
+      disabled = []
+      disabled.push :left if @prev
+      disabled.push :right if @next
+      border.write_to(content, left_x, right_x, upper_y, lower_y, disabled)
+    end
+
+    # FIXME: borderの幅も追加すべきだけど後回し
+    child_x = left_x + self.padding.left
     prev_child = nil
     @children.each do |child|
       if prev_child.nil?

@@ -6,7 +6,7 @@ require 'zlib'
 
 require_relative 'pdf_serialize_extension'
 
-class PdfImage
+module PdfImage
 
   class Png
 
@@ -155,16 +155,20 @@ class PdfImage
 
   end
 
-  def initialize
-    @anchor = DEFAULT_ANCHOR
-    @dpi = DEFAULT_DPI
-  end
+  class Setting
 
-  attr_accessor :anchor, :dpi
+    def initialize
+      @anchor = DEFAULT_ANCHOR
+      @dpi = DEFAULT_DPI
+    end
 
-  def write_in(content, &block)
-    pen = Pen.new(content, anchor: @anchor, dpi: @dpi)
-    block.call(pen)
+    attr_accessor :anchor, :dpi
+
+    def get_pen_for(content, &block)
+      pen = Pen.new(content, anchor: @anchor, dpi: @dpi)
+      block.call(pen)
+    end
+
   end
 
 end
@@ -182,8 +186,8 @@ if __FILE__ == $0
   puts "height: #{png.height}"
   puts "dpi   : #{png.dpi}"
 
-  image = PdfImage.new
-  image.write_in(content) do |pen|
+  image_setting = PdfImage::Setting.new
+  image_setting.get_pen_for(content) do |pen|
     pen.paint png
   end
 

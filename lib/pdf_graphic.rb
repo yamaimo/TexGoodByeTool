@@ -2,7 +2,7 @@
 
 require_relative 'pdf_color'
 
-class PdfGraphic
+module PdfGraphic
 
   class Path
 
@@ -262,35 +262,41 @@ class PdfGraphic
 
   end
 
-  def initialize
-    @line_width = DEFAULT_LINE_WIDTH
-    @line_cap = DEFAULT_LINE_CAP
-    @line_join = DEFAULT_LINE_JOIN
-    @miter_limit = DEFAULT_MITER_LIMIT
-    @dash_pattern = DEFAULT_DASH_PATTERN
-    @dash_phase = DEFAULT_DASH_PHASE
-    @stroke_color = DEFAULT_STROKE_COLOR
-    @fill_color = DEFAULT_FILL_COLOR
-    @use_even_odd_rule = DEFAULT_USE_EVEN_ODD_RULE
-  end
+  class Setting
 
-  attr_accessor :line_width, :line_cap, :line_join, :miter_limit, :dash_pattern, :dash_phase
-  attr_accessor :stroke_color, :fill_color, :use_even_odd_rule
-
-  def write_in(content, &block)
-    content.stack_graphic_state do
-      pen = Pen.new(content, use_even_odd_rule: @use_even_odd_rule)
-
-      pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
-      pen.set_line_cap(@line_cap) if @line_cap != DEFAULT_LINE_CAP
-      pen.set_line_join(@line_join) if @line_join != DEFAULT_LINE_JOIN
-      pen.set_miter_limit(@miter_limit) if @miter_limit != DEFAULT_MITER_LIMIT
-      pen.set_dash(@dash_pattern, @dash_phase) if @dash_pattern != DEFAULT_DASH_PATTERN
-      pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
-      pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
-
-      block.call(pen)
+    def initialize
+      # 設定なしはnilにする
+      @line_width = nil
+      @line_cap = nil
+      @line_join = nil
+      @miter_limit = nil
+      @dash_pattern = nil
+      @dash_phase = DEFAULT_DASH_PHASE
+      @stroke_color = nil
+      @fill_color = nil
+      @use_even_odd_rule = DEFAULT_USE_EVEN_ODD_RULE
     end
+
+    attr_accessor :line_width, :line_cap, :line_join, :miter_limit, :dash_pattern, :dash_phase
+    attr_accessor :stroke_color, :fill_color, :use_even_odd_rule
+
+    def get_pen_for(content, &block)
+      content.stack_graphic_state do
+        pen = Pen.new(content, use_even_odd_rule: @use_even_odd_rule)
+
+        # 設定されたものだけセットする
+        pen.set_line_width(@line_width) if @line_width
+        pen.set_line_cap(@line_cap) if @line_cap
+        pen.set_line_join(@line_join) if @line_join
+        pen.set_miter_limit(@miter_limit) if @miter_limit
+        pen.set_dash(@dash_pattern, @dash_phase) if @dash_pattern
+        pen.set_stroke_color(@stroke_color) if @stroke_color
+        pen.set_fill_color(@fill_color) if @fill_color
+
+        block.call(pen)
+      end
+    end
+
   end
 
 end
@@ -307,55 +313,55 @@ if __FILE__ == $0
     to [2, 0], ctrl1: [1.552, 1], ctrl2: [2, 0.448]
   end
 
-  graphic = PdfGraphic.new
-  graphic.write_in(content) do |pen|
+  graphic_setting = PdfGraphic::Setting.new
+  graphic_setting.get_pen_for(content) do |pen|
     pen.stroke path
   end
 
-  graphic.write_in(content) do |pen|
+  graphic_setting.get_pen_for(content) do |pen|
     copied = path.clone
     copied.scale ratio: 1.5
     pen.stroke copied
   end
 
-  graphic.line_width = 5
-  graphic.line_cap = PdfGraphic::LineCapStyle::ROUND
-  graphic.line_join = PdfGraphic::LineJoinStyle::ROUND
-  graphic.write_in(content) do |pen|
+  graphic_setting.line_width = 5
+  graphic_setting.line_cap = PdfGraphic::LineCapStyle::ROUND
+  graphic_setting.line_join = PdfGraphic::LineJoinStyle::ROUND
+  graphic_setting.get_pen_for(content) do |pen|
     copied = path.clone
     copied.move dx: 1, dy: 2
     pen.stroke copied
   end
 
-  graphic.line_cap = PdfGraphic::DEFAULT_LINE_CAP
-  graphic.line_join = PdfGraphic::DEFAULT_LINE_JOIN
-  graphic.dash_pattern = [4, 2]
-  graphic.dash_phase = 2
-  graphic.write_in(content) do |pen|
+  graphic_setting.line_cap = PdfGraphic::DEFAULT_LINE_CAP
+  graphic_setting.line_join = PdfGraphic::DEFAULT_LINE_JOIN
+  graphic_setting.dash_pattern = [4, 2]
+  graphic_setting.dash_phase = 2
+  graphic_setting.get_pen_for(content) do |pen|
     copied = path.clone
     copied.rotate rad: Math::PI/4, anchor: [1, 1]
     pen.stroke copied
   end
 
-  graphic.dash_pattern = PdfGraphic::DEFAULT_DASH_PATTERN
-  graphic.dash_phase = PdfGraphic::DEFAULT_DASH_PHASE
-  graphic.stroke_color = PdfColor::Rgb.new red: 1.0
-  graphic.fill_color = PdfColor::Rgb.new green: 1.0
-  graphic.write_in(content) do |pen|
+  graphic_setting.dash_pattern = PdfGraphic::DEFAULT_DASH_PATTERN
+  graphic_setting.dash_phase = PdfGraphic::DEFAULT_DASH_PHASE
+  graphic_setting.stroke_color = PdfColor::Rgb.new red: 1.0
+  graphic_setting.fill_color = PdfColor::Rgb.new green: 1.0
+  graphic_setting.get_pen_for(content) do |pen|
     copied = path.clone
     copied.h_flip x: 4
     pen.stroke_fill copied
   end
 
-  graphic.use_even_odd_rule = true
-  graphic.write_in(content) do |pen|
+  graphic_setting.use_even_odd_rule = true
+  graphic_setting.get_pen_for(content) do |pen|
     copied = path.clone
     copied.v_flip y: 4
     pen.stroke_fill copied
   end
 
-  graphic = PdfGraphic.new
-  graphic.write_in(content) do |pen|
+  graphic_setting = PdfGraphic::Setting.new
+  graphic_setting.get_pen_for(content) do |pen|
     basic_rect = PdfGraphic::Rectangle.new([0, 0], [2, 3])
     pen.stroke basic_rect
 

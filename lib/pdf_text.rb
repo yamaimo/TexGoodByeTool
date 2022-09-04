@@ -4,7 +4,7 @@ require_relative 'hex_extension'
 require_relative 'pdf_color'
 require_relative 'pdf_serialize_extension'
 
-class PdfText
+module PdfText
 
   module RenderingMode
     FILL = 0
@@ -92,38 +92,44 @@ class PdfText
 
   end
 
-  def initialize(pdf_font, font_size)
-    @font = pdf_font
-    @size = font_size
-    @leading = DEFAULT_LEADING
-    @text_rise = DEFAULT_TEXT_RISE
-    @rendering_mode = DEFAULT_RENDERING_MODE
-    @line_width = DEFAULT_LINE_WIDTH
-    @stroke_color = DEFAULT_STROKE_COLOR
-    @fill_color = DEFAULT_FILL_COLOR
-  end
+  class Setting
 
-  attr_accessor :font, :size, :leading, :text_rise
-  attr_accessor :rendering_mode, :line_width, :stroke_color, :fill_color
-
-  def write_in(content, &block)
-    content.stack_graphic_state do
-      pen = Pen.new(content, @font)
-
-      content.add_operation "BT"
-
-      pen.set_font(@font, @size) if @font # FIXME: 本来@fontはnilでないべき
-      pen.set_leading(@leading) if @leading != DEFAULT_LEADING
-      pen.set_text_rise(@text_rise) if @text_rise != DEFAULT_TEXT_RISE
-      pen.set_rendering_mode(@rendering_mode) if @rendering_mode != DEFAULT_RENDERING_MODE
-      pen.set_line_width(@line_width) if @line_width != DEFAULT_LINE_WIDTH
-      pen.set_stroke_color(@stroke_color) if @stroke_color != DEFAULT_STROKE_COLOR
-      pen.set_fill_color(@fill_color) if @fill_color != DEFAULT_FILL_COLOR
-
-      block.call(pen)
-
-      content.add_operation "ET"
+    def initialize(pdf_font, font_size)
+      @font = pdf_font
+      @size = font_size
+      # 設定なしはnilにする
+      @leading = nil
+      @text_rise = nil
+      @rendering_mode = nil
+      @line_width = nil
+      @stroke_color = nil
+      @fill_color = nil
     end
+
+    attr_accessor :font, :size, :leading, :text_rise
+    attr_accessor :rendering_mode, :line_width, :stroke_color, :fill_color
+
+    def get_pen_for(content, &block)
+      content.stack_graphic_state do
+        pen = Pen.new(content, @font)
+
+        content.add_operation "BT"
+        pen.set_font(@font, @size)
+
+        # 設定されたものだけセットする
+        pen.set_leading(@leading) if @leading
+        pen.set_text_rise(@text_rise) if @text_rise
+        pen.set_rendering_mode(@rendering_mode) if @rendering_mode
+        pen.set_line_width(@line_width) if @line_width
+        pen.set_stroke_color(@stroke_color) if @stroke_color
+        pen.set_fill_color(@fill_color) if @fill_color
+
+        block.call(pen)
+
+        content.add_operation "ET"
+      end
+    end
+
   end
 
 end
@@ -152,9 +158,9 @@ if __FILE__ == $0
   font_size = 14
   line_gap = font_size / 2
 
-  text = PdfText.new(pdf_font, font_size)
-  text.leading = font_size + line_gap
-  text.write_in(content) do |pen|
+  text_setting = PdfText::Setting.new(pdf_font, font_size)
+  text_setting.leading = font_size + line_gap
+  text_setting.get_pen_for(content) do |pen|
     ["ABCDE", "あいうえお", "斉斎齊齋", "\u{20B9F}\u{20D45}\u{20E6D}"].each do |str|
       pen.puts str
     end
@@ -163,13 +169,13 @@ if __FILE__ == $0
     pen.puts "グッバイしたい！"
   end
 
-  text = PdfText.new(pdf_font, font_size)
-  text.leading = font_size + line_gap
-  text.rendering_mode = PdfText::RenderingMode::FILL_STROKE
-  text.line_width = 2
-  text.stroke_color = PdfColor::Rgb.new red: 1.0
-  text.fill_color = PdfColor::Rgb.new green: 1.0
-  text.write_in(content) do |pen|
+  text_setting = PdfText::Setting.new(pdf_font, font_size)
+  text_setting.leading = font_size + line_gap
+  text_setting.rendering_mode = PdfText::RenderingMode::FILL_STROKE
+  text_setting.line_width = 2
+  text_setting.stroke_color = PdfColor::Rgb.new red: 1.0
+  text_setting.fill_color = PdfColor::Rgb.new green: 1.0
+  text_setting.get_pen_for(content) do |pen|
     pen.puts "装飾文字"
   end
 
