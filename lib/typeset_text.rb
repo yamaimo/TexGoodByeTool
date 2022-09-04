@@ -1,11 +1,11 @@
 # 組版オブジェクト：テキスト
 
 require_relative 'margin'
-require_relative 'text_style'
 require_relative 'typeset_char'
 require_relative 'typeset_space'
 
 class TypesetText
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: TypesetChar | TypesetSpace
   #   require: #width, #write_with, #stretch?, #strut?,
   #            TypesetChar.create, TypesetChar#to_s,
@@ -76,8 +76,6 @@ class TypesetText
   end
 
   def add_char(char)
-    puts "TypesetText#add_char (char: #{char})" # debug
-
     last_child = @chars.empty? ? nil : @chars.last
 
     # 最後にstrutが入っていた場合、遅延させていた改行を実行してから文字を追加
@@ -145,12 +143,11 @@ class TypesetText
     @stretches.push stretch
   end
 
-  def write_to(content, upper_left_x, upper_left_y)
-    child_x = upper_left_x
-    baseline_y = upper_left_y - self.ascender
+  def write_to(content, left_x, upper_y)
+    child_x = left_x
+    baseline_y = upper_y - self.ascender
     content.stack_graphic_state do
       content.move_origin child_x, baseline_y
-      puts "TypesetText#write_to (x: #{child_x}, y: #{baseline_y})"  # debug
       @text_style.to_pdf_text_setting.get_pen_for(content) do |pen|
         @chars.each do |char|
           char.write_with(pen)

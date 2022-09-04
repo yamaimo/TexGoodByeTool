@@ -1,9 +1,10 @@
 # 組版オブジェクト：ブロック要素
 
-require_relative 'typeset_space'
+require_relative 'margin'
 require_relative 'typeset_line'
 
 class TypesetBlock
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: TypesetBlock | TypesetLine
   #   require: #margin, #width, #height,
   #            TypesetBlock#block_style, #text_style
@@ -159,12 +160,9 @@ class TypesetBlock
   end
 
   def break_line
-    puts "TypesetBlock#break_line"  # debug
-
     # 改ページが必要になってる場合、改ページして新しい行を返す
     # そうでない場合、単に新しい行を返す
     if self.height > @allocated_height
-      puts "height: #{self.height}, allocated_height: #{@allocated_height}" # debug
       self.break_page
       @next.new_line
     else
@@ -173,8 +171,6 @@ class TypesetBlock
   end
 
   def break_page
-    puts "TypesetBlock#break_page"  # debug
-
     # 子がいない状態で呼ばないこと
     # （一番最後の子がコピーされるため）
     raise "Invalid state (no children)." if @children.empty?
@@ -207,13 +203,11 @@ class TypesetBlock
     end
   end
 
-  def write_to(content, upper_left_x, upper_left_y)
+  def write_to(content, left_x, upper_y)
     border = @block_style.border
     if border.has_valid_line?
-      left_x = upper_left_x
-      right_x = upper_left_x + @allocated_width # 幅いっぱいまで引く
-      upper_y = upper_left_y
-      lower_y = upper_left_y - self.height
+      right_x = left_x + @allocated_width # 幅いっぱいまで引く
+      lower_y = upper_y - self.height
       disabled = []
       disabled.push :top if @prev
       disabled.push :bottom if @next
@@ -221,7 +215,7 @@ class TypesetBlock
     end
 
     # FIXME: borderの幅も追加すべきだけど後回し
-    child_y = upper_left_y - self.padding.top
+    child_y = upper_y - self.padding.top
     prev_child = nil
     @children.each do |child|
       if prev_child.nil?
@@ -233,9 +227,8 @@ class TypesetBlock
         end
       end
 
-      child_x = upper_left_x + self.padding.left + child.margin.left
+      child_x = left_x + self.padding.left + child.margin.left
 
-      puts "TypesetBlock#write_to (x: #{child_x}, y: #{child_y})"  # debug
       child.write_to(content, child_x, child_y)
 
       child_y -= child.height

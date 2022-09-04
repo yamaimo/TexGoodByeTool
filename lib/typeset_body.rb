@@ -3,11 +3,11 @@
 require_relative 'margin'
 require_relative 'padding'
 require_relative 'block_style'
-require_relative 'text_style'
 require_relative 'typeset_block'
 require_relative 'typeset_line'
 
 class TypesetBody
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: TypesetBlock | TypesetLine
   #   require: #margin, #width, #height
   #            TypesetBlock#block_style, #text_style
@@ -125,12 +125,9 @@ class TypesetBody
   end
 
   def break_line
-    puts "TypesetBody#break_line"  # debug
-
     # 改ページが必要になってる場合、改ページして新しい行を返す
     # そうでない場合、単に新しい行を返す
     if self.height > @allocated_height
-      puts "height: #{self.height}, allocated_height: #{@allocated_height}" # debug
       self.break_page
       @next.new_line
     else
@@ -139,8 +136,6 @@ class TypesetBody
   end
 
   def break_page
-    puts "TypesetBody#break_page"  # debug
-
     # 子がいない状態で呼ばれたら、単に親に依頼する
     if @children.empty?
       @next = @parent.break_page
@@ -170,8 +165,8 @@ class TypesetBody
     end
   end
 
-  def write_to(content, upper_left_x, upper_left_y)
-    child_y = upper_left_y
+  def write_to(content, left_x, upper_y)
+    child_y = upper_y
     prev_child = nil
     @children.each do |child|
       if prev_child.nil?
@@ -183,9 +178,8 @@ class TypesetBody
         end
       end
 
-      child_x = upper_left_x + child.margin.left
+      child_x = left_x + child.margin.left
 
-      puts "TypesetBody#write_to (x: #{child_x}, y: #{child_y})"  # debug
       child.write_to(content, child_x, child_y)
 
       child_y -= child.height

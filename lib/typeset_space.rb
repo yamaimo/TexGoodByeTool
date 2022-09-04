@@ -1,6 +1,7 @@
 # 組版オブジェクト：スペース
 
 class TypesetSpace
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: (none)
   # parent: TypesetText
   #   require: -

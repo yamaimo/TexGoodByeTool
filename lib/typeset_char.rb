@@ -1,6 +1,7 @@
 # 組版オブジェクト：文字
 
 class TypesetChar
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: (none)
   # parent: TypesetText
   #   require: -

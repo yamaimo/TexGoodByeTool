@@ -58,11 +58,10 @@ class TypesetImage
     false
   end
 
-  def write_to(content, upper_left_x, upper_left_y)
-    puts "TypesetImage#write_to (x: #{upper_left_x}, y: #{upper_left_y})"  # debug
+  def write_to(content, left_x, upper_y)
     image_setting = PdfImage::Setting.new
     image_setting.get_pen_for(content) do |pen|
-      pen.paint @image, x: upper_left_x, y: upper_left_y
+      pen.paint @image, x: left_x, y: upper_y
     end
   end
 

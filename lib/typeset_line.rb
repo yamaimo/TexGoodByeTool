@@ -3,12 +3,12 @@
 require_relative 'margin'
 require_relative 'padding'
 require_relative 'inline_style'
-require_relative 'text_style'
 require_relative 'typeset_inline'
 require_relative 'typeset_text'
 require_relative 'typeset_image'
 
 class TypesetLine
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: TypesetInline | TypesetText | TypesetImage
   #   require: #margin, #width, #ascender, #descender,
   #            #stretch_count, #stretch_width=, #write_to
@@ -122,8 +122,6 @@ class TypesetLine
   end
 
   def break_line
-    puts "TypesetLine#break_line"  # debug
-
     # 子が空になっている場合、あらかじめ取り除いておく
     last_child = @children.last
     @children.pop if last_child.empty?
@@ -151,8 +149,8 @@ class TypesetLine
     end
   end
 
-  def write_to(content, upper_left_x, upper_left_y)
-    child_x = upper_left_x
+  def write_to(content, left_x, upper_y)
+    child_x = left_x
     prev_child = nil
     @children.each do |child|
       if prev_child.nil?
@@ -162,9 +160,8 @@ class TypesetLine
       end
 
       # 自身のascenderの高さが基準で、子のascenderの高さにy軸の位置を持っていく
-      child_y = upper_left_y - self.ascender + child.ascender
+      child_y = upper_y - self.ascender + child.ascender
 
-      puts "TypesetLine#write_to (x: #{child_x}, y: #{child_y})"  # debug
       child.write_to(content, child_x, child_y)
 
       child_x += child.width

@@ -1,9 +1,11 @@
 # 組版オブジェクト：インライン要素
 
+require_relative 'margin'
 require_relative 'typeset_text'
 require_relative 'typeset_image'
 
 class TypesetInline
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: TypesetInline | TypesetText | TypesetImage
   #   require: #margin, #width, #ascender, #descender,
   #            #stretch_count, #stretch_width=,
@@ -181,13 +183,11 @@ class TypesetInline
     @parent.adjust_stretch_width
   end
 
-  def write_to(content, upper_left_x, upper_left_y)
+  def write_to(content, left_x, upper_y)
     border = @inline_style.border
     if border.has_valid_line?
-      left_x = upper_left_x
-      right_x = upper_left_x + self.width
-      upper_y = upper_left_y
-      lower_y = upper_left_y - self.height
+      right_x = left_x + self.width
+      lower_y = upper_y - self.height
       disabled = []
       disabled.push :left if @prev
       disabled.push :right if @next
@@ -195,7 +195,7 @@ class TypesetInline
     end
 
     # FIXME: borderの幅も追加すべきだけど後回し
-    child_x = upper_left_x + self.padding.left
+    child_x = left_x + self.padding.left
     prev_child = nil
     @children.each do |child|
       if prev_child.nil?
@@ -205,9 +205,8 @@ class TypesetInline
       end
 
       # 自身のascenderの高さが基準で、子のascenderの高さにy軸の位置を持っていく
-      child_y = upper_left_y - self.ascender + child.ascender
+      child_y = upper_y - self.ascender + child.ascender
 
-      puts "TypesetInline#write_to (x: #{child_x}, y: #{child_y})"  # debug
       child.write_to(content, child_x, child_y)
 
       child_x += child.width

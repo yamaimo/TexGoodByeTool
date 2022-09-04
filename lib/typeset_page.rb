@@ -3,6 +3,7 @@
 require_relative 'typeset_body'
 
 class TypesetPage
+  # FIXME: このコメントを不要にしたい（ちゃんと整理できてない）
   # child: TypesetBody
   #   require: #block_style, #text_style, #write_to
   #   required: #break_page
@@ -57,17 +58,15 @@ class TypesetPage
 
   def write_to(content)
     if @body
-      upper_left_x = @page_style.margin.left + @page_style.padding.left
-      upper_left_y = @height - @page_style.margin.top - @page_style.padding.top
-      puts "TypesetPage#write_to (body, x: #{upper_left_x}, y: #{upper_left_y})"  # debug
-      @body.write_to content, upper_left_x, upper_left_y
+      left_x = @page_style.margin.left + @page_style.padding.left
+      upper_y = @height - @page_style.margin.top - @page_style.padding.top
+      @body.write_to content, left_x, upper_y
     end
 
     if @footer
-      upper_left_x = @page_style.margin.left + @page_style.padding.left
-      upper_left_y = @page_style.margin.bottom - @page_style.to_footer_gap
-      puts "TypesetPage#write_to (footer, x: #{upper_left_x}, y: #{upper_left_y})"  # debug
-      @footer.write_to content, upper_left_x, upper_left_y
+      left_x = @page_style.margin.left + @page_style.padding.left
+      upper_y = @page_style.margin.bottom - @page_style.to_footer_gap
+      @footer.write_to content, left_x, upper_y
     end
   end
 
