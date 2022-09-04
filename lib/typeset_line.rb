@@ -115,8 +115,10 @@ class TypesetLine
     child
   end
 
-  def new_image
-    # FIXME: not yet
+  def new_image(pdf_image)
+    child = TypesetImage.new(pdf_image)
+    @children.push child
+    child
   end
 
   def break_line
@@ -134,7 +136,8 @@ class TypesetLine
     when TypesetText
       @next.new_text
     when TypesetImage
-      #@next.new_image  # FIXME: not yet
+      # imageからbreak_lineは呼ばれないので、ここに来ることはない
+      raise "Invalid state (last child is image)."
     end
   end
 

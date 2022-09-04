@@ -175,7 +175,7 @@ class TypesetBlock
 
     # 子がいない状態で呼ばないこと
     # （一番最後の子がコピーされるため）
-    raise "Invalid status (no children)." if @children.empty?
+    raise "Invalid state (no children)." if @children.empty?
 
     last_child = @children.last
     # 子が空になっている場合、あらかじめ取り除いておく

@@ -12,7 +12,7 @@ require_relative 'text_style'
 require_relative 'dom_handler'
 require_relative 'block_node_handler'
 require_relative 'inline_node_handler'
-#require_relative 'image_node_handler'
+require_relative 'image_node_handler'
 require_relative 'text_handler'
 
 class MarkdownParser
@@ -86,7 +86,7 @@ class MarkdownParser
     end
 
     # 画像
-    #ImageNodeHandler.add_to(dom_handler)
+    ImageNodeHandler.add_to(dom_handler)
 
     # テキスト
     TextHandler.add_to(dom_handler)
