@@ -3,6 +3,7 @@
 require 'erb'
 require 'redcarpet'
 require 'ox'
+require 'cgi'
 
 def erb_test
   "erbによる出力"
@@ -33,7 +34,7 @@ markdown = <<~END_OF_MARKDOWN
 
   ![雪だるま](christmas_snowman.png)
 
-  ```
+  ```noborder
   # Rubyのコードの例
 
   class Dummy
@@ -54,6 +55,10 @@ markdown = <<~END_OF_MARKDOWN
     </body>
   </html>
   ```
+
+  <div>
+    hoge
+  </div>
 
   <%= erb_test %>をやってみる。
   <%=
@@ -92,7 +97,20 @@ puts "=============================="
 
 # markdown -> html
 
-redcarpet = Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true)
+# Redcarpetの処理を一部変更してみる
+class MyRender < Redcarpet::Render::HTML
+  # languageで切り替え
+  def block_code(code, language)
+    escaped = CGI.escape_html(code)
+    if language == "noborder"
+      "<pre_noborder><code>#{escaped}</code></pre_noborder>"
+    else
+      "<pre><code>#{escaped}</code></pre>"
+    end
+  end
+end
+
+redcarpet = Redcarpet::Markdown.new(MyRender, fenced_code_blocks: true)
 html = redcarpet.render markdown
 
 puts "==== html ===================="

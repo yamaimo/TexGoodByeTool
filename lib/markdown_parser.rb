@@ -1,5 +1,6 @@
 # Markdownから組版オブジェクトへのパース
 
+require 'cgi'
 require 'redcarpet'
 require 'ox'
 
@@ -14,6 +15,21 @@ require_relative 'block_node_handler'
 require_relative 'inline_node_handler'
 require_relative 'image_node_handler'
 require_relative 'text_handler'
+
+# 今の実装だとpreで枠のあり/なしを切り替えられないので、
+# 無理矢理切り替える（これを使い続けるのはNG）
+class CustomRender < Redcarpet::Render::HTML
+  # languageが指定されていた場合、
+  # <pre>ではなく<pre_{language}>にする（スタイルは別途指定）
+  def block_code(code, language)
+    escaped = CGI.escape_html(code)
+    if language
+      "<pre_#{language}><code>#{escaped}</code></pre_#{language}>"
+    else
+      "<pre><code>#{escaped}</code></pre>"
+    end
+  end
+end
 
 class MarkdownParser
 
@@ -54,7 +70,7 @@ class MarkdownParser
   end
 
   def markdown_to_html(markdown)
-    redcarpet = Redcarpet::Markdown.new(Redcarpet::Render::HTML, fenced_code_blocks: true)
+    redcarpet = Redcarpet::Markdown.new(CustomRender, fenced_code_blocks: true)
     html = redcarpet.render markdown
     "<body>#{html}</body>"
   end
