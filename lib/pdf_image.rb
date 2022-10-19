@@ -127,7 +127,8 @@ module PdfImage
     def paint(image, x: 0, y: 0)
       @content.stack_graphic_state do
         # 画像を出力すると1pt x 1ptの矩形に出力される
-        # 1pt = 1/72inなので72dpi(=72px/in)のとき1px = 1/72in = 1pt
+        # 1pt = 1/72inなので72dpi(=72px/in)のとき
+        # 1px = 1/72in = 1pt
         # なので72dpiならwidth x heightに伸ばすといい
         # 解像度が違う場合はさらに72/dpi倍すると長さがあう
         dpi = @dpi || image.dpi # 指定がなければ画像のdpiを使う
