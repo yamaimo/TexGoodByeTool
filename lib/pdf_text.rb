@@ -31,9 +31,6 @@ module PdfText
     end
 
     def set_font(pdf_font, size)
-      # NOTE: 今はここでpdf_fontに必要とされる機能が
-      # sfnt_fontと等しいので、sfnt_fontも指定可能
-      # （本来はpdf_fontのみが指定されるべき）
       @content.add_operation \
         "#{pdf_font.id.to_sym.serialize} #{size} Tf"
       @font = pdf_font
