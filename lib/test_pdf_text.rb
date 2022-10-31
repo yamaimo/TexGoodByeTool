@@ -86,13 +86,17 @@ page.add_content do |content|
   content.stack_graphic_state do
     content.move_origin 22.mm, 128.mm
 
+    red = PdfColor::Rgb.new red: 1.0
+    yellow = PdfColor::Rgb.new red: 1.0, green: 1.0
+
     # レンダリングモードを変えて出力
     text_setting = PdfText::Setting.new(pdf_font, 48)
     text_setting.leading = 56
-    text_setting.rendering_mode = PdfText::RenderingMode::FILL_STROKE
+    text_setting.rendering_mode \
+      = PdfText::RenderingMode::FILL_STROKE
     text_setting.line_width = 1.5
-    text_setting.stroke_color = PdfColor::Rgb.new red: 1.0
-    text_setting.fill_color = PdfColor::Rgb.new red: 1.0, green: 1.0
+    text_setting.stroke_color = red
+    text_setting.fill_color = yellow
     text_setting.get_pen_for(content) do |pen|
       put_tex(pen, 48)
       pen.puts "グッバイ"
